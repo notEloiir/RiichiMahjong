@@ -1,16 +1,12 @@
-import pygame, menu, game_screen
+import pygame, game_screen, menu, events
 from sys import exit
 
 
 class Board(game_screen.GameScreen):
-    def process_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            if event.type == pygame.KEYDOWN:
-                self.context.switch_game_screen(menu.Menu(self.context))
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            ev = pygame.event.Event(events.SWITCH_GAME_SCREEN, game_screen=menu.Menu())
+            pygame.event.post(ev)
 
     def update(self):
-        self.context.display_surface.fill('#113311')
-        self.process_events()
+        self.display_surface.fill('#113311')
