@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-import pygame, ui.ui_items as ui_items, ui.ui_layouts as ui_layouts
+import pygame, ui
 from settings import *
 
 if TYPE_CHECKING:
@@ -22,26 +22,26 @@ class Menu(GameScreen):
     def __init__(self, gui: Gui) -> None:
         super().__init__(gui)
         self.buttons = [
-            ui_items.Button(
+            ui.Button(
                 (0, 0),
                 (0, 0),
                 lambda: self.gui.switch_game_screen(Board(self.gui)),
                 text="Play",
             ),
-            ui_items.Button(
+            ui.Button(
                 (0, 0),
                 (0, 0),
                 lambda: print("options"),
                 text="Options",
             ),
-            ui_items.Button(
+            ui.Button(
                 (0, 0),
                 (0, 0),
                 lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)),
                 text="Exit",
             ),
         ]
-        self.ui_vertical_box = ui_layouts.UIVerticalBox(
+        self.buttons_container = ui.UIVerticalBox(
             (0, 0), gui.display_surface.get_size(), self.buttons, (0.3, 0.1), 0.05
         )
 
@@ -55,32 +55,34 @@ class Menu(GameScreen):
 
     def draw(self) -> None:
         self.gui.display_surface.fill("#8CBEB2")
-        self.ui_vertical_box.draw(self.gui.dt, self.gui.display_surface)
+        self.buttons_container.draw(self.gui.dt, self.gui.display_surface)
 
 
 class Board(GameScreen):
     def __init__(self, gui: Gui):
         super().__init__(gui)
-        self.exit_pop_up = ui_items.TextPopUp(
+        self.exit_pop_up = ui.TextPopUp(
             (0, 0),
             (0, 0),
             buttons=[
-                ui_items.Button(
+                ui.Button(
                     (0, 0),
                     (0, 0),
                     on_click=lambda: self.gui.switch_game_screen(Menu(self.gui)),
                     text="YES",
+                    bg_color="#8CBEB2",
                 ),
-                ui_items.Button(
+                ui.Button(
                     (0, 0),
                     (0, 0),
                     on_click=lambda: self.exit_pop_up.toggle(),
                     text="NO",
+                    bg_color="#F3B562",
                 ),
             ],
             text="Exit to menu?",
         )
-        self.exit_pop_up_container = ui_layouts.UIVerticalBox(
+        self.exit_pop_up_container = ui.UIVerticalBox(
             (0, 0),
             gui.display_surface.get_size(),
             [self.exit_pop_up],
