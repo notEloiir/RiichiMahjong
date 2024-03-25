@@ -27,7 +27,7 @@ class Gui:
                 else:
                     self.game_screen.handle_event(event)
 
-            self.game_screen.update()
+            self.game_screen.draw()
             pygame.display.flip()
             self.dt = self.clock.tick(60) / 1000
 
