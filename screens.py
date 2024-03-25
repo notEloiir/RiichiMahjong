@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-import pygame, ui
+import pygame, random, ui, tile, hand
 from settings import *
 
 if TYPE_CHECKING:
@@ -19,30 +19,30 @@ class GameScreen:
 
 
 class Menu(GameScreen):
-    def __init__(self, gui: Gui) -> None:
+    def __init__(self, gui: Gui):
         super().__init__(gui)
+        self.setup_ui()
+    
+    def setup_ui(self):
         self.buttons = [
             ui.Button(
-                (0, 0),
-                (0, 0),
-                lambda: self.gui.switch_game_screen(Board(self.gui)),
+                on_click=lambda: self.gui.switch_game_screen(Board(self.gui)),
                 text="Play",
             ),
             ui.Button(
-                (0, 0),
-                (0, 0),
-                lambda: print("options"),
+                on_click=lambda: print("options"),
                 text="Options",
             ),
             ui.Button(
-                (0, 0),
-                (0, 0),
-                lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)),
+                on_click=lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)),
                 text="Exit",
             ),
         ]
         self.buttons_container = ui.UIVerticalBox(
-            (0, 0), gui.display_surface.get_size(), self.buttons, (0.3, 0.1), 0.05
+            size=self.gui.display_surface.get_size(), 
+            items=self.buttons, 
+            padding=(0.3, 0.1), 
+            spacing=0.05
         )
 
     def handle_event(self, event: pygame.Event) -> None:
@@ -61,20 +61,30 @@ class Menu(GameScreen):
 class Board(GameScreen):
     def __init__(self, gui: Gui):
         super().__init__(gui)
+        self.setup_ui()
+        self.hand = hand.PlayerHand(
+            (0, int(0.85 * self.gui.display_surface.get_height())),
+            (self.gui.display_surface.get_width(), int(0.10 * self.gui.display_surface.get_height())),
+        )
+        self.hand.update_tiles(sorted([random.randint(0, 135) for _ in range(14)]))
+
+    def setup_ui(self):
         self.exit_pop_up = ui.TextPopUp(
-            (0, 0),
-            (0, 0),
+            position=(
+                int(0.2 * self.gui.display_surface.get_width()),
+                int(0.3 * self.gui.display_surface.get_height()),
+            ),
+            size=(
+                int(0.6 * self.gui.display_surface.get_width()),
+                int(0.4 * self.gui.display_surface.get_height()),
+            ),
             buttons=[
                 ui.Button(
-                    (0, 0),
-                    (0, 0),
                     on_click=lambda: self.gui.switch_game_screen(Menu(self.gui)),
                     text="YES",
                     bg_color="#8CBEB2",
                 ),
                 ui.Button(
-                    (0, 0),
-                    (0, 0),
                     on_click=lambda: self.exit_pop_up.toggle(),
                     text="NO",
                     bg_color="#F3B562",
@@ -82,11 +92,20 @@ class Board(GameScreen):
             ],
             text="Exit to menu?",
         )
-        self.exit_pop_up_container = ui.UIVerticalBox(
-            (0, 0),
-            gui.display_surface.get_size(),
-            [self.exit_pop_up],
-            (0.2, 0.3),
+        self.info_stripe = ui.UIHorizontalBox(
+            position=(
+                0,
+                int(0.95 * self.gui.display_surface.get_height()),
+            ),
+            size=(
+                self.gui.display_surface.get_width(),
+                int(0.05 * self.gui.display_surface.get_height()),
+            ),
+            items=[
+                ui.Label(text="TABLE WIND: EAST"),
+                ui.Label(text="PLAYER WIND: SOUTH"),
+                ui.Label(text="POINTS: 1000"),
+            ]
         )
 
     def handle_event(self, event: pygame.Event) -> None:
@@ -100,4 +119,7 @@ class Board(GameScreen):
 
     def draw(self) -> None:
         self.gui.display_surface.fill("#79BD8F")
-        self.exit_pop_up_container.draw(self.gui.dt, self.gui.display_surface)
+        self.info_stripe.draw(self.gui.dt, self.gui.display_surface)
+        self.exit_pop_up.draw(self.gui.dt, self.gui.display_surface)
+        self.hand.draw(self.gui.display_surface)
+        
