@@ -19,8 +19,8 @@ class UIVerticalBox:
         self.items = items
         self.padding = (padding[0] * size[0], padding[1] * size[1])
         self.spacing = size[1] * spacing
-
-    def draw(self, display_surface):
+    
+    def draw(self, dt, display_surface):
         item_size = (
             self.size[0] - 2 * self.padding[0],
             (self.size[1] - 2 * self.padding[1] - (len(self.items) - 1) * self.spacing)
@@ -33,4 +33,4 @@ class UIVerticalBox:
                 (item_size[1] + self.spacing) * i + self.padding[1],
             )
             item.size = item_size
-            item.draw(display_surface)
+            item.draw(dt, display_surface)
