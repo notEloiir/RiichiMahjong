@@ -10,13 +10,13 @@ if TYPE_CHECKING:
 class GameScreen:
     def __init__(self, gui: Gui):
         self.gui = gui
-
+    
     def handle_event(self, event: pygame.Event) -> None:
         raise NotImplementedError("Method process_events is not implemented!")
-
-    def draw(self) -> None:
-        raise NotImplementedError("Method draw is not implemented!")
-
+    
+    def update(self) -> None:
+        raise NotImplementedError("Method update is not implemented!")
+    
 
 class Menu(GameScreen):
     def __init__(self, gui: Gui) -> None:
@@ -25,20 +25,26 @@ class Menu(GameScreen):
             ui_items.Button(
                 (0, 0),
                 (0, 0),
+                "#F2EBBF",
                 lambda: self.gui.switch_game_screen(Board(self.gui)),
-                text="Play",
+                "Play",
+                text_color="#5C4B51",
             ),
             ui_items.Button(
                 (0, 0),
                 (0, 0),
+                "#F2EBBF",
                 lambda: print("options"),
-                text="Options",
+                "Options",
+                text_color="#5C4B51",
             ),
             ui_items.Button(
                 (0, 0),
                 (0, 0),
+                "#F2EBBF",
                 lambda: pygame.event.post(pygame.event.Event(pygame.QUIT)),
-                text="Exit",
+                "Exit",
+                text_color="#5C4B51",
             ),
         ]
         self.ui_vertical_box = ui_layouts.UIVerticalBox(
@@ -53,49 +59,15 @@ class Menu(GameScreen):
             for btn in self.buttons:
                 btn.handle_click(event.pos)
 
-    def draw(self) -> None:
+    def update(self) -> None:
         self.gui.display_surface.fill("#8CBEB2")
-        self.ui_vertical_box.draw(self.gui.dt, self.gui.display_surface)
+        self.ui_vertical_box.draw(self.gui.display_surface)
 
 
 class Board(GameScreen):
-    def __init__(self, gui: Gui):
-        super().__init__(gui)
-        self.exit_pop_up = ui_items.TextPopUp(
-            (0, 0),
-            (0, 0),
-            buttons=[
-                ui_items.Button(
-                    (0, 0),
-                    (0, 0),
-                    on_click=lambda: self.gui.switch_game_screen(Menu(self.gui)),
-                    text="YES",
-                ),
-                ui_items.Button(
-                    (0, 0),
-                    (0, 0),
-                    on_click=lambda: self.exit_pop_up.toggle(),
-                    text="NO",
-                ),
-            ],
-            text="Exit to menu?",
-        )
-        self.exit_pop_up_container = ui_layouts.UIVerticalBox(
-            (0, 0),
-            gui.display_surface.get_size(),
-            [self.exit_pop_up],
-            (0.2, 0.3),
-        )
-
     def handle_event(self, event: pygame.Event) -> None:
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self.exit_pop_up.toggle()
-            else:
-                self.gui.switch_game_screen(Menu(self.gui))
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            self.exit_pop_up.handle_click(event.pos)
+            self.gui.switch_game_screen(Menu(self.gui))
 
-    def draw(self) -> None:
-        self.gui.display_surface.fill("#79BD8F")
-        self.exit_pop_up_container.draw(self.gui.dt, self.gui.display_surface)
+    def update(self) -> None:
+        self.gui.display_surface.fill('#79BD8F')
