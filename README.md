@@ -14,7 +14,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 
 1. Clone the repository:  
     ```
-    git clone https://github.com/[username]/[projectname].git
+    git clone https://github.com/notEloiir/RiichiMahjong.git
     ```
    
 2. Install dependencies:
@@ -27,7 +27,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 
     1. Clone phoenix-logs repository into the project directory  
         ```
-        cd [projectname]  
+        cd RiichiMahjong  
         git clone https://github.com/ApplySci/phoenix-logs.git
        ```
     2. Install phoenix-logs and download logs and their contents, phoenix-logs/README.md explains how
