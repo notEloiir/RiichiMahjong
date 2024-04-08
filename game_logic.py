@@ -1,35 +1,15 @@
 import random
-from parse_matches import Tile, InputFeatures, MoveType
-from enum import Enum
+from training_data_classes import InputFeatures
+import torch
+from player import Player
+from mahjong_enums import EventType, HandStatus, MoveType
+from tile import Tile
 
 from mahjong import shanten, agari
 from mahjong.meld import Meld
 from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 import mahjong.constants as mc
-
-import torch
-from player import Player
-
-
-class EventType(Enum):
-    DRAW_TILE = 0
-    DRAW_TILE_AFTER_KAN = 1
-    DISCARD_TILE = 2
-    TILE_DISCARDED = 3
-    ROUND_DRAW = 4
-    WALL_EXHAUSTED = 5
-    WINNER = 6
-
-
-class HandStatus(Enum):
-    DEFAULT = 0
-    RIICHI_DISCARD = 1
-    RIICHI_NO_STICK = 2
-    RIICHI_NEW = 3
-    RIICHI = 4
-    TEMP_FURITEN = 5
-    PERM_FURITEN = 6
 
 
 def wind_from_int(wind_id):
