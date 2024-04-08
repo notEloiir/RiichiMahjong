@@ -63,12 +63,11 @@ class MoveData:
 
 
 class RoundData:
-    def __init__(self, dealer):
+    def __init__(self, dealer, initial_dora):
         self.moves: list[MoveData] = []
         self.dealer = dealer
         self.dealt_in: int | None = None  # id of player who dealt in, not None only for RON
-        self.dora_ind = []
-        self.revealed_dora_ind = []
+        self.initial_dora: Tile = initial_dora
         self.uradora = []
         self.score_before = [0] * 4
         self.score_change = [0] * 4
@@ -148,11 +147,10 @@ def parse_match_log(log_raw):
     for event in match_parsed.iter():
         match event.tag:
             case "INIT":  # start round
-                new_round = RoundData(int(event.attrib["oya"]))
+                new_round = RoundData(int(event.attrib["oya"]), Tile(int(event.attrib["seed"][-1])))
                 for i in range(4):
                     new_round.init_hands[i] = [Tile(int(t)) for t in event.attrib["hai{}".format(i)].split(',')]
                 match_info.rounds.append(new_round)
-                # TODO: apparently attrib "seed" (list), 6th (last) argument is dora
 
             case "N":  # call
                 new_move = MoveData()
@@ -180,7 +178,6 @@ def parse_match_log(log_raw):
 
             case "DORA":  # dora revealed (after kan)
                 match_info.rounds[-1].moves[-1].dora_revealed_ind = Tile(int(event.attrib["hai"]))
-                match_info.rounds[-1].revealed_dora_ind.append(Tile(int(event.attrib["hai"])))
 
             case "AGARI":  # round finishes with someone winning
                 new_move = MoveData()
@@ -194,17 +191,17 @@ def parse_match_log(log_raw):
                 match_info.rounds[-1].score_before = [int(score) for score in event.attrib["sc"].split(',')][::2]
                 match_info.rounds[-1].score_change = [int(score) for score in event.attrib["sc"].split(',')][1::2]
                 if "doraHai" in event.attrib.keys():
-                    match_info.rounds[-1].dora_ind = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
+                    match_info.rounds[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
                 if "doraHaiUra" in event.attrib.keys():
-                    match_info.rounds[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
+                    match_info.rounds[-1].uradora += [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
 
             case "RYUUKYOKU":  # round finishes with a draw
                 match_info.rounds[-1].score_before = [int(score) for score in event.attrib["sc"].split(',')][::2]
                 match_info.rounds[-1].score_change = [int(score) for score in event.attrib["sc"].split(',')][1::2]
                 if "doraHai" in event.attrib.keys():
-                    match_info.rounds[-1].dora_ind = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
+                    match_info.rounds[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
                 if "doraHaiUra" in event.attrib.keys():
-                    match_info.rounds[-1].dora_ind = [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
+                    match_info.rounds[-1].uradora += [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
 
             case _:
                 if draw_regex.search(event.tag):  # draw tile
@@ -417,9 +414,7 @@ def get_data_from_replay(matches_data: list[MatchData], device):
             hand_in_riichi = [0]*4
             hand_is_closed = [1]*4
             visible_dora_ind = [0] * 34
-            for dora in round_data.dora_ind:
-                if dora not in round_data.revealed_dora_ind:
-                    visible_dora_ind[dora.to_int()] = 1
+            visible_dora_ind[round_data.initial_dora.to_int()] = 1
             curr_player_id = round_data.dealer
             prev_player_id = curr_player_id
             turn_no = 0
