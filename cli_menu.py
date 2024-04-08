@@ -1,4 +1,5 @@
 from models import get_device, initialize_model, train_model, save_model, load_model
+from compare_models import versus
 
 
 if __name__ == "__main__":
@@ -11,7 +12,8 @@ Select mode:  (train auto-saves checkpoints and saves the result)
 init [num_layers] [hidden_size]
 train [how_many] [starting_from] [batch_size] [filename] [db_file]
 save [filename]
-load [filename]
+load [filename] (will call init with proper arguments)
+versus [how_many_matches]  - compare models against each other
 quit
         """)
 
@@ -53,6 +55,31 @@ quit
                 filename = user_input[1]
                 print("Loading models from ", filename)
                 model = load_model(filename, device=device)
+
+            case "versus":
+                if len(user_input) != 2:
+                    print("Expecting 1 argument for load, got {}.".format(len(user_input) - 1))
+                    continue
+                how_many = int(user_input[1])
+
+                competitors = []
+                names = []
+                i = 0
+                while i < 4:
+                    input2 = input(f"Load competitor {i}: [filename] ").split(' ')
+                    if len(input2) != 1:
+                        print("Expecting 1 argument for load for versus, got {}.".format(len(input2)))
+                        continue
+                    filename = input2[0]
+                    competitor = load_model(filename, device)
+                    competitors.append(competitor)
+                    names.append(filename)
+                    i += 1
+
+                win_rates = versus(competitors, how_many, device)
+                print("Win rates:")
+                for i in range(4):
+                    print("{}: {}".format(names[i], win_rates[i]))
 
             case "quit":
                 print("Bye")
