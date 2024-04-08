@@ -22,6 +22,16 @@ class EventType(Enum):
     WINNER = 6
 
 
+class HandStatus(Enum):
+    DEFAULT = 0
+    RIICHI_DISCARD = 1
+    RIICHI_NO_STICK = 2
+    RIICHI_NEW = 3
+    RIICHI = 4
+    TEMP_FURITEN = 5
+    PERM_FURITEN = 6
+
+
 def wind_from_int(wind_id):
     match wind_id:
         case 0:
@@ -67,6 +77,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
     red5_hidden = [[1] * 3 for _ in range(4)]
     first_move = [1] * 4
     four_quads_draw_flag = False
+    hand_status = [HandStatus.DEFAULT for _ in range(4)]
 
     # PREP ROUND
     game_tiles = [Tile(t) for t in range(34 * 4)]
@@ -98,7 +109,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
         if dora_indicator.is_red5():
             red5_hidden[p][dora_indicator.to_int() // 9] = 0
 
-    # TODO: implement temp furiten and perma furiten (in riichi)
     # GAME LOGIC
     event = Event(EventType.DRAW_TILE, dealer_id)
     while True:
@@ -240,6 +250,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                     case MoveType.RIICHI:
                         hand_in_riichi[curr_player_id] = turn_no
+                        hand_status[curr_player_id] = HandStatus.RIICHI_DISCARD
 
                     case MoveType.TSUMO:
                         event = Event(EventType.WINNER, [curr_player_id, [curr_player_id]])
@@ -248,8 +259,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 event = Event(EventType.DISCARD_TILE, curr_player_id)
 
             case EventType.DISCARD_TILE:
-                # TODO: hand_in_riichi[curr_player_id] != turn_no is wrong and should be handled by hand_status
-                if hand_in_riichi[curr_player_id] and hand_in_riichi[curr_player_id] != turn_no:
+                if hand_in_riichi[curr_player_id] and hand_status[curr_player_id] != HandStatus.RIICHI_DISCARD:
                     discard_tile = closed_hands[curr_player_id][-1]
                 elif competitors[curr_player_id].is_human:
                     # TODO: ask player what to discard
@@ -298,6 +308,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 if discard_tile.is_red5():
                     red5_closed_hand[curr_player_id][discard_tile.to_int() // 9] = 0
                     red5_discarded[discard_tile.to_int() // 9] = 1
+
+                if hand_status[curr_player_id] == HandStatus.RIICHI_DISCARD:
+                    hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
+                elif hand_status[curr_player_id] == HandStatus.RIICHI_NEW:
+                    hand_status[curr_player_id] = HandStatus.RIICHI
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -513,6 +528,10 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         if tile.is_red5():
                             red5_discarded[tile.to_int() // 9] = 0
                             red5_open_hand[curr_player_id][tile.to_int() // 9] = 1
+
+                    case MoveType.PASS:
+                        if hand_status[from_who] == HandStatus.RIICHI_NO_STICK:
+                            hand_status[from_who] = HandStatus.RIICHI_NEW
 
                 if decision != MoveType.PASS:
                     open_melds_tile_ids[curr_player_id].append(new_meld_ids)
