@@ -1,5 +1,6 @@
 from models import get_device, initialize_model, train_model, save_model, load_model
 from compare_models import versus
+from player import Player
 
 
 if __name__ == "__main__":
@@ -71,8 +72,7 @@ quit
                         print("Expecting 1 argument for load for versus, got {}.".format(len(input2)))
                         continue
                     filename = input2[0]
-                    competitor = load_model(filename, device)
-                    competitors.append(competitor)
+                    competitors.append(Player(is_human=False, model=load_model(filename, device)))
                     names.append(filename)
                     i += 1
 

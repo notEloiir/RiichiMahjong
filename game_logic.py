@@ -10,6 +10,7 @@ import mahjong.constants as mc
 
 import torch
 from models import MahjongNN
+from player import Player
 
 
 class EventType(Enum):
@@ -40,7 +41,7 @@ class Event:
         self.who = who
 
 
-def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, device):
+def simulate_round(competitors: list[Player], scores, non_repeat_round_no, device):
     hand_calculator = HandCalculator()
 
     # INIT
@@ -147,7 +148,7 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
                     continue
 
                 # decide what to do
-                if competitors[curr_player_id] is not None:
+                if not competitors[curr_player_id].is_human:
                     tile_to_call = None
                     tile_origin = None
                     if is_kan_possible:
@@ -161,7 +162,8 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
                                            red5_hidden[curr_player_id], tile_to_call, tile_origin)
 
                     # query the model
-                    discard_tiles, call_tiles, action = competitors[curr_player_id].get_prediction(inputs.to_tensor())
+                    discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
+                        inputs.to_tensor())
                     action = action.clone()
 
                     # zero out everything that isn't possible
@@ -238,7 +240,7 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
             case EventType.DISCARD_TILE:
                 if hand_in_riichi[curr_player_id] and hand_in_riichi[curr_player_id] != turn_no:
                     discard_tile = closed_hands[curr_player_id][-1]
-                elif competitors[curr_player_id] is None:
+                elif competitors[curr_player_id].is_human:
                     # TODO: ask player what to discard
                     discard_tile = closed_hands[curr_player_id][-1]
                 else:
@@ -251,7 +253,8 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
                                            red5_hidden[curr_player_id])
 
                     # query the model
-                    discard_tiles, call_tiles, action = competitors[curr_player_id].get_prediction(inputs.to_tensor())
+                    discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
+                        inputs.to_tensor())
                     discard_tiles = discard_tiles.clone()
 
                     # zero out everything that isn't possible
@@ -332,7 +335,7 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
                     if p == from_who:
                         continue
 
-                    if competitors[p] is None:
+                    if competitors[p].is_human:
                         # TODO: ask player what they want in life*
                         # *limited to what is possible :/
                         pass
@@ -345,7 +348,7 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
                                                red5_hidden[p])
 
                         # query the model
-                        discard_tiles, call_tiles_curr, action = competitors[p].get_prediction(inputs.to_tensor())
+                        discard_tiles, call_tiles_curr, action = competitors[p].model.get_prediction(inputs.to_tensor())
                         call_tiles[p] = call_tiles_curr
                         action = action.clone()
 
@@ -445,10 +448,10 @@ def simulate_round(competitors: list[MahjongNN], scores, non_repeat_round_no, de
 
                     case MoveType.CHI:
                         # query what chi exactly
-                        if competitors[curr_player_id] is None and len(possible_chi[curr_player_id]) > 1:
+                        if competitors[curr_player_id].is_human and len(possible_chi[curr_player_id]) > 1:
                             # TODO: ask player what chi do they want
                             best_chi = (-1, 1)
-                        elif competitors[curr_player_id] is not None and len(possible_chi[curr_player_id]) > 1:
+                        elif (not competitors[curr_player_id].is_human) and len(possible_chi[curr_player_id]) > 1:
                             chi_value = [0.] * len(possible_chi[curr_player_id])
                             best_chi = []
                             best_chi_value = 0.
