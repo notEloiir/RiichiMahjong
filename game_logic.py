@@ -9,7 +9,6 @@ from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 import mahjong.constants as mc
 
 import torch
-from models import MahjongNN
 from player import Player
 
 
@@ -66,6 +65,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
     red5_open_hand = [[0] * 3 for _ in range(4)]
     red5_discarded = [0] * 3
     red5_hidden = [[1] * 3 for _ in range(4)]
+    first_move = [1] * 4
+    four_quads_draw_flag = False
 
     # PREP ROUND
     game_tiles = [Tile(t) for t in range(34 * 4)]
@@ -97,9 +98,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
         if dora_indicator.is_red5():
             red5_hidden[p][dora_indicator.to_int() // 9] = 0
 
-    # TODO: handle draw conditions bs (four winds, nine orphans)
     # TODO: implement temp furiten and perma furiten (in riichi)
-    # TODO: after fourth quad discard, check if draw
     # GAME LOGIC
     event = Event(EventType.DRAW_TILE, dealer_id)
     while True:
@@ -117,8 +116,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 else:
                     tile = dead_wall[dora_revealed_no - 1]
                     if dora_revealed_no == 5 and sum(open_hand_counts[curr_player_id]) != 16:  # 4 kans by >1 player
-                        # TODO: set flag to check for draw
-                        pass
+                        four_quads_draw_flag = True
 
                 closed_hand_counts[curr_player_id][tile.to_int()] += 1
                 closed_hands[curr_player_id].append(tile)
@@ -126,6 +124,15 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 if tile.is_red5():
                     red5_closed_hand[curr_player_id][tile.to_int() // 9] = 1
                     red5_hidden[curr_player_id][tile.to_int() // 9] = 0
+
+                # check for nine orphans draw
+                if competitors[curr_player_id].is_human and first_move[curr_player_id] and sum(
+                        [closed_hand_counts[curr_player_id][i] for i in (0, 8, 9, 17, 18) + tuple(range(26, 34))]) >= 9:
+                    # TODO: ask player if they want to abort the round (draw)
+                    abort = False
+                    if abort:
+                        event = Event(EventType.ROUND_DRAW, -1)
+                        continue
 
                 # checking whether KAN, RIICHI, TSUMO possible
                 is_kan_possible = closed_hand_counts[curr_player_id][tile.to_int()] == 4
@@ -205,7 +212,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         closed_hand_counts[curr_player_id][tile.to_int()] = 0
                         i = 0
                         while i < len(closed_hands[curr_player_id]):
-                            if tile.to_int()*4 <= closed_hands[curr_player_id][i].true_id() <= tile.to_int()*4 + 3:
+                            if tile.to_int() * 4 <= closed_hands[curr_player_id][i].true_id() <= tile.to_int() * 4 + 3:
                                 open_hands[curr_player_id].append(closed_hands[curr_player_id].pop(i))
                             else:
                                 i += 1
@@ -216,6 +223,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                  opened=False, called_tile=tile.true_id(), who=curr_player_id, from_who=curr_player_id))
 
                         # reveal dora
+                        if dora_revealed_no >= 5:
+                            event = Event(EventType.ROUND_DRAW, -1)
+                            continue
                         dora_indicator = dora_indicators[dora_revealed_no]
                         visible_dora[dora_indicator.to_int()] += 1
                         dora_revealed_no += 1
@@ -238,6 +248,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 event = Event(EventType.DISCARD_TILE, curr_player_id)
 
             case EventType.DISCARD_TILE:
+                # TODO: hand_in_riichi[curr_player_id] != turn_no is wrong and should be handled by hand_status
                 if hand_in_riichi[curr_player_id] and hand_in_riichi[curr_player_id] != turn_no:
                     discard_tile = closed_hands[curr_player_id][-1]
                 elif competitors[curr_player_id].is_human:
@@ -295,6 +306,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 decision = MoveType.PASS
                 tile = discard_piles[from_who][-1]
 
+                # check for four winds draw
+                if turn_no == 4 and any(all(discard_orders[p][wind] for p in range(4)) for wind in range(27, 31)):
+                    event = Event(EventType.ROUND_DRAW, -1)
+                    continue
+
                 is_chi_possible = [False] * 4
                 is_pon_possible = [False] * 4
                 is_kan_possible = [False] * 4
@@ -322,7 +338,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     is_pon_possible[p] = closed_hand_counts[p][tile.to_int()] >= 2 and not hand_in_riichi[p]
                     is_kan_possible[p] = closed_hand_counts[p][tile.to_int()] == 3 and not hand_in_riichi[p]
                     if agari.Agari().is_agari(
-                        [closed_hand_counts[p][i] + open_hand_counts[p][i] for i in range(34)], open_melds_tile_ids[p]):
+                            [closed_hand_counts[p][i] + open_hand_counts[p][i] for i in range(34)],
+                            open_melds_tile_ids[p]):
                         tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]]
                         win_tile136 = closed_hands[p][-1].true_id()
                         hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
@@ -388,6 +405,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     curr_player_id = 0
                     while wants[curr_player_id] != MoveType.CHI:
                         curr_player_id += 1
+
+                # the last discard is not a winning tile, check for 4 kan draw or 4 riichi draw
+                if four_quads_draw_flag or all(hand_in_riichi):
+                    event = Event(EventType.ROUND_DRAW, -1)
+                    continue
 
                 new_meld_ids = []
                 match decision:
