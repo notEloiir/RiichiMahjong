@@ -24,7 +24,6 @@ class Tile:
         return self.to_int() < 27 and self.to_int() % 9 == 4 and self.id % 4 == 0
 
     def __str__(self):
-        # only for debugging
         return """
             1m 2m 3m 4m 5m 6m 7m 8m 9m
             1p 2p 3p 4p 5p 6p 7p 8p 9p
@@ -318,7 +317,31 @@ class TrainingData:
         self.label: Label = label
         self.input_tensor = torch.empty(0, dtype=torch.float32)
         self.label_tensor = torch.empty(0, dtype=torch.float32)
+        self.pos_weight = torch.empty(0, dtype=torch.float32)
         self.device = device
+
+    def set_weight(self, move_type: MoveType):
+        match move_type:
+            case MoveType.DISCARD | MoveType.PASS:
+                discard_weight = 0.5 + self.inputs.turn[0] * 0.01
+                call_weight = 0.
+                action_weight = 1.
+            case MoveType.CHI | MoveType.PON | MoveType.KAN:
+                discard_weight = 0.
+                call_weight = 1.
+                action_weight = 2.
+            case _:  # RIICHI, RON, TSUMO
+                discard_weight = 0.
+                call_weight = 0.
+                action_weight = 2.
+
+        multiplier = 1. + torch.sum(self.inputs.hand_in_riichi) * 0.5
+        discard_weight *= multiplier
+        call_weight *= multiplier
+        action_weight *= multiplier
+
+        weights = [discard_weight]*34 + [call_weight]*34 + [action_weight]*8
+        self.pos_weight = torch.tensor(weights, device=self.device, dtype=torch.float32)
 
     def proc(self):
         self.input_tensor = self.inputs.to_tensor()
@@ -327,6 +350,7 @@ class TrainingData:
     def to(self, device):
         self.input_tensor = self.input_tensor.to(device)
         self.label_tensor = self.label_tensor.to(device)
+        self.pos_weight = self.pos_weight.to(device)
 
 
 def count_tiles(tiles: list[Tile]):
@@ -334,6 +358,42 @@ def count_tiles(tiles: list[Tile]):
     for tile in tiles:
         counts[tile.to_int()] += 1
     return counts
+
+
+def augument_data(orig_data: TrainingData, discard_orders, move_type: MoveType, device) -> list[TrainingData]:
+    # augment the minority class samples
+    match move_type:
+        case MoveType.CHI | MoveType.PON:
+            how_many = 3
+        case MoveType.RIICHI:
+            how_many = 5
+        case MoveType.KAN | MoveType.TSUMO | MoveType.RON:
+            how_many = 10
+        case _:
+            return []
+
+    def shuffle_discards(discard_orders):
+        discard_orders_shuffled = [discard_orders[p].copy() for p in range(4)]
+        for p in range(4):
+            for _ in range(20):
+                i0 = random.randint(0, 33)
+                i1 = random.randint(0, 33)
+                if discard_orders[p][i0] and discard_orders[p][i1]:
+                    discard_orders_shuffled[p][i0], discard_orders_shuffled[p][i1] = \
+                        discard_orders_shuffled[p][i1], discard_orders_shuffled[p][i0]
+        return discard_orders_shuffled
+
+    augumented_data = []
+    for i in range(how_many):
+        data_point = TrainingData(None, None, device)
+        data_point.inputs = orig_data.inputs  # reference
+        data_point.inputs.discard_piles = torch.tensor(shuffle_discards(discard_orders),
+                                                       device=device, dtype=torch.float32)
+        data_point.input_tensor = data_point.inputs.to_tensor()
+        data_point.label_tensor = orig_data.label_tensor  # reference
+        data_point.pos_weight = orig_data.pos_weight  # reference
+        augumented_data.append(data_point)
+    return augumented_data
 
 
 def get_data_from_replay(matches_data: list[MatchData], device):
@@ -438,6 +498,9 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                     data_point.inputs = training_inputs
                     data_point.set_weight(move_data.move_type)
                     data_point.proc()
+
+                    augumented_data = augument_data(data_point, discard_orders, move_data.move_type, device)
+                    training_data.extend(augumented_data)
                     # end inputs
 
                 # GAME LOGIC
