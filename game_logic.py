@@ -289,10 +289,13 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     red5_closed_hand[curr_player_id][discard_tile.to_int() // 9] = 0
                     red5_discarded[discard_tile.to_int() // 9] = 1
 
-                if hand_status[curr_player_id] == HandStatus.RIICHI_DISCARD:
-                    hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
-                elif hand_status[curr_player_id] == HandStatus.RIICHI_NEW:
-                    hand_status[curr_player_id] = HandStatus.RIICHI
+                match (hand_status[curr_player_id]):
+                    case HandStatus.RIICHI_DISCARD:
+                        hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
+                    case HandStatus.RIICHI_NEW:
+                        hand_status[curr_player_id] = HandStatus.RIICHI
+                    case HandStatus.TEMP_FURITEN:
+                        hand_status[curr_player_id] = HandStatus.DEFAULT
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -332,9 +335,10 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     is_chi_possible[p] = bool(possible_chi[p]) and not hand_in_riichi[p]
                     is_pon_possible[p] = closed_hand_counts[p][tile.to_int()] >= 2 and not hand_in_riichi[p]
                     is_kan_possible[p] = closed_hand_counts[p][tile.to_int()] == 3 and not hand_in_riichi[p]
-                    if agari.Agari().is_agari(
-                            [closed_hand_counts[p][i] + open_hand_counts[p][i] for i in range(34)],
-                            open_melds_tile_ids[p]):
+                    if hand_status[p] != HandStatus.TEMP_FURITEN and hand_status[p] != HandStatus.PERM_FURITEN and \
+                            agari.Agari().is_agari(
+                                [closed_hand_counts[p][i]+open_hand_counts[p][i] for i in range(34)],
+                                open_melds_tile_ids[p]):
                         tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]]
                         win_tile136 = closed_hands[p][-1].true_id()
                         hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
@@ -512,6 +516,10 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case MoveType.PASS:
                         if hand_status[from_who] == HandStatus.RIICHI_NO_STICK:
                             hand_status[from_who] = HandStatus.RIICHI_NEW
+
+                for p in range(4):
+                    if is_ron_possible[p] and wants[p] != MoveType.RON:
+                        hand_status[p] = HandStatus.PERM_FURITEN if hand_in_riichi[p] else HandStatus.TEMP_FURITEN
 
                 if decision != MoveType.PASS:
                     open_melds_tile_ids[curr_player_id].append(new_meld_ids)
