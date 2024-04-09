@@ -435,6 +435,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                                           opened=True, called_tile=tile.true_id(), who=curr_player_id,
                                                           from_who=from_who))
 
+                        if len(meld_tiles) != 4:
+                            print("why")
+
                         # reveal dora
                         dora_indicator = dora_indicators[dora_revealed_no]
                         visible_dora[dora_indicator.to_int()] += 1
@@ -467,20 +470,26 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                                           opened=True, called_tile=tile.true_id(), who=curr_player_id,
                                                           from_who=from_who))
 
+                        if len(meld_tiles) != 3:
+                            print("why")
+
                     case MoveType.CHI:
                         # query what chi exactly
                         if competitors[curr_player_id].is_human and len(possible_chi[curr_player_id]) > 1:
                             # TODO: ask player what chi do they want
                             best_chi = (-1, 1)
                         elif (not competitors[curr_player_id].is_human) and len(possible_chi[curr_player_id]) > 1:
-                            chi_value = [0.] * len(possible_chi[curr_player_id])
                             best_chi = []
                             best_chi_value = 0.
                             for i, chi in enumerate(possible_chi[curr_player_id]):
                                 for tile_id_mod in chi:
-                                    chi_value[i] += float(call_tiles[curr_player_id][tile.to_int() + tile_id_mod])
-                                if best_chi_value < chi_value[i]:
-                                    best_chi = possible_chi[curr_player_id][i]
+                                    chi_value = float(call_tiles[curr_player_id][tile.to_int() + tile_id_mod])
+                                    if best_chi_value < chi_value:
+                                        best_chi = possible_chi[curr_player_id][i]
+                                        best_chi_value = chi_value
+
+                            if not best_chi_value:
+                                best_chi = random.choice(possible_chi[curr_player_id])
                         else:
                             best_chi = possible_chi[curr_player_id][0]
 
@@ -509,6 +518,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         melds[curr_player_id].append(Meld(meld_type=Meld.CHI, tiles=[t.true_id() for t in meld_tiles],
                                                           opened=True, called_tile=tile.true_id(), who=curr_player_id,
                                                           from_who=from_who))
+
+                        if len(meld_tiles) != 3:
+                            print("why")
                         if tile.is_red5():
                             red5_discarded[tile.to_int() // 9] = 0
                             red5_open_hand[curr_player_id][tile.to_int() // 9] = 1
