@@ -5,8 +5,8 @@ class UIItem:
     def __init__(self, position=(0, 0), size=(0, 0)) -> None:
         self.size = size
         self.position = position
-
-    def draw(self, dt, display_surface):
+        
+    def draw(self, display_surface):
         raise NotImplementedError("Method draw is not implemented!")
 
 
@@ -17,22 +17,33 @@ class Label(UIItem):
         size=(0, 0),
         text="",
         text_color=settings.PRIMARY_COLOR,
+        align="center",
     ) -> None:
         super().__init__(position, size)
         self.text = text
         self.text_color = text_color
+        self.align = align
 
-    def draw(self, dt, display_surface):
+    def draw(self, display_surface):
         if self.text:
             font = pygame.font.Font(settings.FONT_NAME, int(self.size[1]) // 2)
             text = font.render(self.text, True, self.text_color)
-            display_surface.blit(
-                text,
-                (
+            if self.align == "left":
+                text_position = (
+                    self.position[0],
+                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                )
+            elif self.align == "right":
+                text_position = (
+                    self.position[0] + self.size[0] - text.get_width(),
+                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                )
+            else:
+                text_position = (
                     self.position[0] + (self.size[0] / 2 - text.get_width() / 2),
                     self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
-                ),
-            )
+                )
+            display_surface.blit(text, text_position)
 
 
 class Button(UIItem):
@@ -62,13 +73,13 @@ class Button(UIItem):
                 )
             )
 
-    def draw(self, dt, display_surface):
+    def draw(self, display_surface):
         rect = pygame.rect.Rect(*self.position, *self.size)
         pygame.draw.rect(display_surface, self.bg_color, rect, 0, 10)
 
         self.content.position = self.position
         self.content.size = self.size
-        self.content.draw(dt, display_surface)
+        self.content.draw(display_surface)
 
     def handle_click(self, mouse_pos):
         rect = pygame.rect.Rect(*self.position, *self.size)
@@ -116,7 +127,7 @@ class TextPopUp(UIItem):
                 )
             )
 
-    def draw(self, dt, display_surface):
+    def draw(self, display_surface):
         if not self.active:
             return
 
@@ -125,7 +136,7 @@ class TextPopUp(UIItem):
 
         self.content.position = self.position
         self.content.size = self.size
-        self.content.draw(dt, display_surface)
+        self.content.draw(display_surface)
 
     def toggle(self):
         self.active = not self.active
@@ -155,7 +166,7 @@ class UIVerticalBox(UIItem):
         self.padding = padding
         self.spacing = spacing
 
-    def draw(self, dt, display_surface):
+    def draw(self, display_surface):
         padding = (self.padding[0] * self.size[0], self.padding[1] * self.size[1])
         spacing = self.size[1] * self.spacing
         item_size = (
@@ -170,7 +181,7 @@ class UIVerticalBox(UIItem):
                 self.position[1] + (item_size[1] + spacing) * i + padding[1],
             )
             item.size = item_size
-            item.draw(dt, display_surface)
+            item.draw(display_surface)
 
 
 class UIHorizontalBox(UIItem):
@@ -188,7 +199,7 @@ class UIHorizontalBox(UIItem):
         self.padding = padding
         self.spacing = spacing
 
-    def draw(self, dt, display_surface):
+    def draw(self, display_surface):
         if not len(self.items):
             return
 
@@ -206,4 +217,4 @@ class UIHorizontalBox(UIItem):
                 self.position[1] + padding[1],
             )
             item.size = item_size
-            item.draw(dt, display_surface)
+            item.draw(display_surface)

@@ -1,15 +1,15 @@
 import pygame
 
 
+# TODO: zrobić resource managera, który wczytuje wszystkie obrazki na początku
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, position, size, tile_id) -> None:
+    def __init__(self, position, size, tile_id, rotation=0) -> None:
         pygame.sprite.Sprite.__init__(self)
         self.position = position
         self.size = size
         self.tile_id = tile_id
-        self.image = self.prepare_tile_image()
-        self.rect = self.image.get_rect()
-        self.rect.topleft = self.position
+        self.image = pygame.transform.rotate(self.prepare_tile_image(), rotation * 90)
+        self.rect = self.image.get_rect(center=self.position)
 
     def prepare_tile_image(self):
         symbol_image = """

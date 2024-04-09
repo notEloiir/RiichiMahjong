@@ -1,4 +1,4 @@
-import pygame, screens
+import pygame, menu
 from settings import *
 from sys import exit
 
@@ -12,9 +12,9 @@ class Gui:
         self.running = False
         self.clock = pygame.time.Clock()
         self.dt = 0
-        self.game_screen = screens.Menu(self)
+        self.game_screen = menu.Menu(self)
 
-    def switch_game_screen(self, game_screen: screens.GameScreen) -> None:
+    def switch_game_screen(self, game_screen) -> None:
         self.game_screen = game_screen
 
     def run(self) -> None:
