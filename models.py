@@ -2,15 +2,17 @@ import math
 import os
 import time
 import traceback
-import xml.etree.ElementTree as ET
-import threading
+from xml.etree.ElementTree import ParseError
+from db_connect import get_match_log_data
+from parse_logs import parse_match_log
+from label_data import get_data_from_replay
+from training_data_classes import TrainingData
+# import threading
 
 import torch.nn as nn
 import torch.optim as optim
 import torch.cuda
 import torch.nn.functional as F
-
-from parse_matches import get_match_log_data, parse_match_log, get_data_from_replay, TrainingData
 
 
 class MahjongNN(nn.Module):
@@ -194,7 +196,7 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
             model.evaluate_on_replay(training_data[int(td_len * 0.9):])
             print("Batch evaluation complete:\t\t\t\t\t\t\t\t\t", time.time() - start)
 
-        except (ValueError, TypeError, ET.ParseError):
+        except (ValueError, TypeError, ParseError):
             # so that you don't lose progress when database entry is corrupted, and you realize 8h later
             print("Batch failed.")
             traceback.print_exc()
