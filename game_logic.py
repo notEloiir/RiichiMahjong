@@ -89,6 +89,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
         if dora_indicator.is_red5():
             red5_hidden[p][dora_indicator.to_int() // 9] = 0
 
+    # TODO: (show) update board
+
     # GAME LOGIC
     event = Event(EventType.DRAW_TILE, dealer_id)
     while True:
@@ -114,11 +116,12 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 if tile.is_red5():
                     red5_closed_hand[curr_player_id][tile.to_int() // 9] = 1
                     red5_hidden[curr_player_id][tile.to_int() // 9] = 0
+                # TODO: (show) update board
 
                 # check for nine orphans draw
                 if competitors[curr_player_id].is_human and first_move[curr_player_id] and sum(
                         [closed_hand_counts[curr_player_id][i] for i in (0, 8, 9, 17, 18) + tuple(range(26, 34))]) >= 9:
-                    # TODO: ask player if they want to abort the round (draw)
+                    # TODO: (query player) ask player if they want to abort the round (draw)
                     abort = False
                     if abort:
                         event = Event(EventType.ROUND_DRAW, -1)
@@ -179,15 +182,18 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     what_do = MoveType(action.argmax(0).item() + 1)
 
                 else:
-                    # TODO: let player decide
+                    # TODO: (query player) let player decide
                     if is_tsumo_possible:
                         # ask player
+                        # what_do = MoveType.TSUMO if [...] else MoveType.PASS
                         pass
                     elif is_riichi_possible:
                         # ask player
+                        # what_do = MoveType.RIICHI if [...] else MoveType.PASS
                         pass
                     elif is_kan_possible:
                         # ask player
+                        # what_do = MoveType.KAN if [...] else MoveType.PASS
                         pass
 
                     # temporary
@@ -223,6 +229,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                             hidden_tile_counts[p][dora_indicator.to_int()] -= 1
                             if dora_indicator.is_red5():
                                 red5_hidden[p][dora_indicator.to_int() // 9] = 0
+                        # TODO: (show) update board
 
                         # get another tile (from dead wall)
                         event = Event(EventType.DRAW_TILE_AFTER_KAN, curr_player_id)
@@ -242,7 +249,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 if hand_in_riichi[curr_player_id] and hand_status[curr_player_id] != HandStatus.RIICHI_DISCARD:
                     discard_tile = closed_hands[curr_player_id][-1]
                 elif competitors[curr_player_id].is_human:
-                    # TODO: ask player what to discard
+                    # TODO: (query player) ask player what to discard
                     discard_tile = closed_hands[curr_player_id][-1]
                 else:
                     # query the model what to discard
@@ -289,6 +296,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     red5_closed_hand[curr_player_id][discard_tile.to_int() // 9] = 0
                     red5_discarded[discard_tile.to_int() // 9] = 1
 
+                # TODO: (show) update board
+
                 match (hand_status[curr_player_id]):
                     case HandStatus.RIICHI_DISCARD:
                         hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
@@ -296,6 +305,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         hand_status[curr_player_id] = HandStatus.RIICHI
                     case HandStatus.TEMP_FURITEN:
                         hand_status[curr_player_id] = HandStatus.DEFAULT
+                        # TODO: (show) update board
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -352,9 +362,17 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         continue
 
                     if competitors[p].is_human:
-                        # TODO: ask player what they want in life*
-                        # *limited to what is possible :/
-                        pass
+                        choices = []
+                        if is_chi_possible[p]:
+                            choices.append(MoveType.CHI)
+                        if is_pon_possible[p]:
+                            choices.append(MoveType.PON)
+                        if is_kan_possible[p]:
+                            choices.append(MoveType.KAN)
+                        if is_ron_possible[p]:
+                            choices.append(MoveType.RON)
+                        # TODO: (query player) ask player what they want
+                        decision = random.choice(choices)
                     else:
                         # prepare the rest of input tensor
                         inputs = InputFeatures(device, p, non_repeat_round_no, turn_no, dealer_id, prevalent_wind,
@@ -435,9 +453,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                                           opened=True, called_tile=tile.true_id(), who=curr_player_id,
                                                           from_who=from_who))
 
-                        if len(meld_tiles) != 4:
-                            print("why")
-
                         # reveal dora
                         dora_indicator = dora_indicators[dora_revealed_no]
                         visible_dora[dora_indicator.to_int()] += 1
@@ -469,9 +484,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         melds[curr_player_id].append(Meld(meld_type=Meld.PON, tiles=[t.true_id() for t in meld_tiles],
                                                           opened=True, called_tile=tile.true_id(), who=curr_player_id,
                                                           from_who=from_who))
-
-                        if len(meld_tiles) != 3:
-                            print("why")
 
                     case MoveType.CHI:
                         # query what chi exactly
@@ -519,8 +531,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                                           opened=True, called_tile=tile.true_id(), who=curr_player_id,
                                                           from_who=from_who))
 
-                        if len(meld_tiles) != 3:
-                            print("why")
                         if tile.is_red5():
                             red5_discarded[tile.to_int() // 9] = 0
                             red5_open_hand[curr_player_id][tile.to_int() // 9] = 1
@@ -528,6 +538,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case MoveType.PASS:
                         if hand_status[from_who] == HandStatus.RIICHI_NO_STICK:
                             hand_status[from_who] = HandStatus.RIICHI_NEW
+                        # TODO: (show) put down riichi stick
 
                 for p in range(4):
                     if is_ron_possible[p] and wants[p] != MoveType.RON:
@@ -537,6 +548,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     open_melds_tile_ids[curr_player_id].append(new_meld_ids)
                     hand_is_closed[curr_player_id] = 0
                     discard_piles[from_who].pop()
+                    # TODO: (show) update board
                     if decision == MoveType.KAN:
                         event = Event(EventType.DRAW_TILE_AFTER_KAN, curr_player_id)
                     else:
@@ -546,6 +558,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
             case EventType.ROUND_DRAW:
                 # no score change, same dealer next round
+                # TODO: (show) show scores
                 return scores, True
 
             case EventType.WALL_EXHAUSTED:
@@ -562,6 +575,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case 1:
                         for p in range(4):
                             scores[p] += 30 if has_tenpai[p] else -10
+                # TODO: (show) show scores
                 return scores, has_tenpai[dealer_id]
 
             case EventType.WINNER:
@@ -618,6 +632,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                             raise Exception(hand_result.error)
 
                         # show result
+                        # TODO: (show) show hand result in GUI instead
                         print(hand_result.han, hand_result.fu)
                         print(hand_result.cost['main'])
                         print(hand_result.yaku)
@@ -643,6 +658,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                 for p in range(4):
                     scores[p] += points_gained[p]
+                # TODO: (show) show scores and points gained
 
                 return scores, dealer_id in winners
 
