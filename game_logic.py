@@ -133,13 +133,19 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 is_riichi_possible = tiles_to_ready_hand == 0 and hand_is_closed[curr_player_id] \
                                      and not hand_in_riichi[curr_player_id]
                 is_tsumo_possible = False
-                if agari.Agari().is_agari(
-                        [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] for i in range(34)]
-                        , open_melds_tile_ids[curr_player_id]):
-                    tiles136 = [t.true_id() for t in closed_hands[curr_player_id] + open_hands[curr_player_id]]
+                if hand_status[curr_player_id] != HandStatus.TEMP_FURITEN and \
+                        hand_status[curr_player_id] != HandStatus.PERM_FURITEN and \
+                        agari.Agari().is_agari(
+                            [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] +
+                             int(tile.to_int() == i) for i in range(34)], open_melds_tile_ids[curr_player_id]):
+                    tiles136 = [t.true_id() for t in closed_hands[curr_player_id]] + [tile.true_id()]
                     win_tile136 = closed_hands[curr_player_id][-1].true_id()
-                    hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
-                                                                      melds=melds[curr_player_id])
+                    hand_result = hand_calculator.estimate_hand_value(
+                        tiles=tiles136, win_tile=win_tile136, melds=melds[curr_player_id], config=HandConfig(
+                            is_tsumo=True, is_riichi=hand_in_riichi[curr_player_id],
+                            player_wind=wind_from_int(seat_wind[curr_player_id]),
+                            round_wind=wind_from_int(non_repeat_round_no)
+                        ))
                     is_tsumo_possible = hand_result.error is None
 
                 # if nothing but discard is possible
@@ -240,6 +246,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         hand_status[curr_player_id] = HandStatus.RIICHI_DISCARD
 
                     case MoveType.TSUMO:
+                        closed_hands[curr_player_id].append(tile)
+                        closed_hand_counts[curr_player_id][tile.to_int()] += 1
                         event = Event(EventType.WINNER, [curr_player_id, [curr_player_id]])
                         continue
 
@@ -325,10 +333,12 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 is_ron_possible = [False] * 4
                 possible_chi = [[] for _ in range(4)]
                 for p in range(4):
-                    if p != from_who:
-                        hidden_tile_counts[p][tile.to_int()] -= 1
-                        if tile.is_red5():
-                            red5_hidden[p][tile.to_int() // 9] = 0
+                    if p == from_who:
+                        continue
+
+                    hidden_tile_counts[p][tile.to_int()] -= 1
+                    if tile.is_red5():
+                        red5_hidden[p][tile.to_int() // 9] = 0
 
                     if tile.to_int() < 27:  # normal tiles, not wind or dragon
                         order_in_set = tile.to_int() % 9
@@ -347,12 +357,15 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     is_kan_possible[p] = closed_hand_counts[p][tile.to_int()] == 3 and not hand_in_riichi[p]
                     if hand_status[p] != HandStatus.TEMP_FURITEN and hand_status[p] != HandStatus.PERM_FURITEN and \
                             agari.Agari().is_agari(
-                                [closed_hand_counts[p][i]+open_hand_counts[p][i] for i in range(34)],
-                                open_melds_tile_ids[p]):
-                        tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]]
-                        win_tile136 = closed_hands[p][-1].true_id()
-                        hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
-                                                                          melds=melds[p])
+                                [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
+                                 for i in range(34)], open_melds_tile_ids[p]):
+                        tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]] + [tile.true_id()]
+                        win_tile136 = tile.true_id()
+                        hand_result = hand_calculator.estimate_hand_value(
+                            tiles=tiles136, win_tile=win_tile136, melds=melds[p], config=HandConfig(
+                                is_riichi=hand_in_riichi[p], player_wind=wind_from_int(seat_wind[p]),
+                                round_wind=wind_from_int(non_repeat_round_no)
+                            ))
                         is_ron_possible[p] = hand_result.error is None
 
                 wants = [MoveType.PASS for _ in range(4)]
@@ -407,7 +420,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     for p in range(4):
                         if wants[p] == MoveType.RON:
                             closed_hands[p].append(tile)
-
+                            closed_hand_counts[p][tile.to_int()] += 1
                     event = Event(EventType.WINNER, [curr_player_id, [p for p in range(4) if wants[p] == MoveType.RON]])
                     continue
                 elif MoveType.KAN in wants or MoveType.PON in wants:
@@ -586,8 +599,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     if p in winners:
                         # TODO: track all this crap
                         # possible
-                        is_tsumo = (dealt_in == -1)
-                        is_riichi = hand_in_riichi[p]
+                        is_tsumo = (dealt_in in winners)
+                        is_riichi = bool(hand_in_riichi[p])
                         is_ippatsu = False
                         is_rinshan = False  # after a kan
                         is_chankan = False  # robbing a kan
