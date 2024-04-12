@@ -1,3 +1,5 @@
+import torch
+
 from models import get_device, initialize_model, train_model, save_model, load_model
 from compare_models import versus
 from player import Player
@@ -72,11 +74,11 @@ quit
                         print("Expecting 1 argument for load for versus, got {}.".format(len(input2)))
                         continue
                     filename = input2[0]
-                    competitors.append(Player(is_human=False, model=load_model(filename, device)))
+                    competitors.append(Player(is_human=False, model=load_model(filename, torch.device("cpu"))))
                     names.append(filename)
                     i += 1
 
-                win_rates = versus(competitors, how_many, device)
+                win_rates = versus(competitors, how_many, torch.device("cpu"))
                 print("Win rates:")
                 for i in range(4):
                     print("{}: {}".format(names[i], win_rates[i]))
