@@ -9,6 +9,7 @@ class EventType(Enum):
     ROUND_DRAW = 4
     WALL_EXHAUSTED = 5
     WINNER = 6
+    AFTER_KAN = 7
 
 
 class HandStatus(Enum):
