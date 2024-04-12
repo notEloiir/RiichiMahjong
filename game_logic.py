@@ -55,9 +55,15 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
     red5_open_hand = [[0] * 3 for _ in range(4)]
     red5_discarded = [0] * 3
     red5_hidden = [[1] * 3 for _ in range(4)]
+
+    # extra tracking
     first_move = [1] * 4
     four_quads_draw_flag = False
     hand_status = [HandStatus.DEFAULT for _ in range(4)]
+    double_riichi = [False] * 4
+    ippatsu = [False] * 4
+    after_a_kan = False
+    stolen_kan = False
 
     # PREP ROUND
     game_tiles = [Tile(t) for t in range(34 * 4)]
@@ -253,8 +259,10 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case MoveType.RIICHI:
                         hand_in_riichi[curr_player_id] = turn_no
                         hand_status[curr_player_id] = HandStatus.RIICHI_DISCARD
+                        double_riichi[curr_player_id] = bool(first_move[curr_player_id])
 
                     case MoveType.TSUMO:
+                        after_a_kan = event.what == EventType.DRAW_TILE_AFTER_KAN
                         closed_hands[curr_player_id].append(tile)
                         closed_hand_counts[curr_player_id][tile.to_int()] += 1
                         event = Event(EventType.WINNER, [curr_player_id, [curr_player_id]])
@@ -315,14 +323,18 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                 # TODO: (show) update board
 
+                # update hand status trackers
+                ippatsu[curr_player_id] = False
                 match (hand_status[curr_player_id]):
                     case HandStatus.RIICHI_DISCARD:
                         hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
+                        ippatsu[curr_player_id] = True
                     case HandStatus.RIICHI_NEW:
                         hand_status[curr_player_id] = HandStatus.RIICHI
                     case HandStatus.TEMP_FURITEN:
                         hand_status[curr_player_id] = HandStatus.DEFAULT
-                        # TODO: (show) update board
+                        # TODO: (fix) it doesn't track properly when temp furiten is because of needed tile discard
+                        # but if you lose furiten status, update board
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -562,6 +574,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                             hand_status[from_who] = HandStatus.RIICHI_NEW
                         # TODO: (show) put down riichi stick
 
+                # update hand status trackers
                 for p in range(4):
                     if is_ron_possible[p] and wants[p] != MoveType.RON:
                         hand_status[p] = HandStatus.PERM_FURITEN if hand_in_riichi[p] else HandStatus.TEMP_FURITEN
@@ -663,18 +676,18 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 points_gained = [0] * 4
                 for p in range(4):
                     if p in winners:
-                        # TODO: track all this crap
                         # possible
                         is_tsumo = (dealt_in in winners)
                         is_riichi = bool(hand_in_riichi[p])
-                        is_ippatsu = False
-                        is_rinshan = False  # after a kan
-                        is_chankan = False  # robbing a kan
-                        is_haitei = False  # tsumo on last tile
-                        is_houtei = False  # ron on last tile
-                        is_daburu_riichi = False  # double riichi
+                        is_ippatsu = ippatsu[p]
+                        is_rinshan = after_a_kan
+                        is_chankan = stolen_kan
+                        is_haitei = is_tsumo and turn_no == 70
+                        is_houtei = not is_tsumo and turn_no == 70
+                        is_daburu_riichi = double_riichi[p]
 
                         # pretty much impossible
+                        # TODO: track this (or don't)
                         is_nagashi_mangan = False  # wtf...? https://riichi.wiki/Nagashi_mangan
                         is_tenhou = False  # win on first draw (dealer)
                         is_renhou = False  # ron on starting hand (no draws) as a first call of the round
