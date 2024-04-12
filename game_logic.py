@@ -321,6 +321,27 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     red5_closed_hand[curr_player_id][discard_tile.to_int() // 9] = 0
                     red5_discarded[discard_tile.to_int() // 9] = 1
 
+                waiting_tiles = [False] * 34
+                if 0 == shanten.Shanten().calculate_shanten(
+                    [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] for i in range(34)]):
+                    for i in range(34):
+                        if closed_hand_counts[curr_player_id][i]:
+                            waiting_tiles[i] = True
+                            if i % 9 > 0:
+                                waiting_tiles[i - 1] = True
+                            if i % 9 < 8 and i < 33:
+                                waiting_tiles[i + 1] = True
+
+                    for i in range(34):
+                        waiting_tiles[i] = waiting_tiles[i] and agari.Agari().is_agari(
+                            [closed_hand_counts[curr_player_id][j] + open_hand_counts[curr_player_id][j]
+                             + int(bool(i)) for j in range(34)], open_melds_tile_ids[curr_player_id])
+
+                # furiten because of discard?
+                discard_furiten = any(waiting_tiles[i] and discard_orders[curr_player_id][i] for i in range(34))
+                if discard_furiten:
+                    hand_status[curr_player_id] = HandStatus.TEMP_FURITEN
+
                 # TODO: (show) update board
 
                 # update hand status trackers
@@ -328,13 +349,15 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 match (hand_status[curr_player_id]):
                     case HandStatus.RIICHI_DISCARD:
                         hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
+                        # TODO: track stick seperately (but don't remove this^)
                         ippatsu[curr_player_id] = True
                     case HandStatus.RIICHI_NEW:
                         hand_status[curr_player_id] = HandStatus.RIICHI
                     case HandStatus.TEMP_FURITEN:
-                        hand_status[curr_player_id] = HandStatus.DEFAULT
-                        # TODO: (fix) it doesn't track properly when temp furiten is because of needed tile discard
-                        # but if you lose furiten status, update board
+                        if not discard_furiten:
+                            hand_status[curr_player_id] = HandStatus.DEFAULT if not hand_in_riichi[curr_player_id] \
+                                else HandStatus.RIICHI
+                            # TODO: (show) update board
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -522,7 +545,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case MoveType.CHI:
                         # query what chi exactly
                         if competitors[curr_player_id].is_human and len(possible_chi[curr_player_id]) > 1:
-                            # TODO: ask player what chi do they want
+                            # TODO: (query player) ask player what chi do they want
                             best_chi = (-1, 1)
                         elif (not competitors[curr_player_id].is_human) and len(possible_chi[curr_player_id]) > 1:
                             best_chi = []
@@ -644,6 +667,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                         # decide what to do
                         wants[p] = MoveType.RON if action[4] > action[7] else MoveType.PASS
+
+                # update hand status trackers
+                for p in range(4):
+                    if is_ron_possible[p] and wants[p] != MoveType.RON:
+                        hand_status[p] = HandStatus.PERM_FURITEN if hand_in_riichi[p] else HandStatus.TEMP_FURITEN
 
                 if MoveType.RON in wants:
                     for p in range(4):
@@ -767,7 +795,7 @@ def simulate_match(competitors, seed, device):
             non_repeat_round_no += 1
 
     # limit round number - if models are too "weak" or too similar, the simulation will never end
-    if round_no < 12:
+    if round_no <= 12:
         print("Match won by someone")
     else:
         print("Draw: too many rounds")
