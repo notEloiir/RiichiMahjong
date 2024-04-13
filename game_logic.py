@@ -141,7 +141,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                             for meld in melds[curr_player_id])
                 tiles_to_ready_hand = shanten.Shanten().calculate_shanten(closed_hand_counts[curr_player_id])
                 is_riichi_possible = tiles_to_ready_hand == 0 and hand_is_closed[curr_player_id] \
-                                     and not hand_in_riichi[curr_player_id]
+                    and not hand_in_riichi[curr_player_id] and scores[curr_player_id] > 10
                 is_tsumo_possible = False
                 if furiten_status[curr_player_id] == FuritenStatus.DEFAULT and \
                         agari.Agari().is_agari(
@@ -590,6 +590,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case MoveType.PASS:
                         if riichi_status[from_who] == RiichiStatus.RIICHI_NO_STICK:
                             riichi_status[from_who] = RiichiStatus.RIICHI
+                            scores[from_who] -= 10
                             # TODO: (show) put down riichi stick
 
                 # update hand status trackers
@@ -722,8 +723,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         # other info
                         player_wind = wind_from_int(seat_wind[p])
                         round_wind = wind_from_int(non_repeat_round_no)
-                        kyoutaku_number = 0  # ???
-                        tsumi_number = 0  # ???
+                        # riichi sticks (no of bets placed)
+                        kyoutaku_number = sum(rs == RiichiStatus.RIICHI for rs in riichi_status)
+                        tsumi_number = 0  # penalty sticks
                         options = OptionalRules(has_aka_dora=True)
 
                         config = HandConfig(is_tsumo, is_riichi, is_ippatsu, is_rinshan, is_chankan, is_haitei,
