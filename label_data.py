@@ -106,8 +106,8 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                 closed_hand_counts = [count_tiles(closed_hand[i]) for i in range(4)]
                 if data_point is not None:
                     # EXTRACT FEATURES
-                    prevalent_wind = (non_repeat_round_no // 4) % 4
-                    seat_wind = non_repeat_round_no % 4
+                    prevalent_wind = ((match_data.rounds[0].dealer + non_repeat_round_no) // 4) % 4
+                    seat_wind = (curr_player_id + non_repeat_round_no) % 4
 
                     discard_counts = [count_tiles(pile) for pile in discard_pile]
                     hidden_tile_counts = [0] * 34
