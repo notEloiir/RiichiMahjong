@@ -341,6 +341,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 # TODO: (show) update board
 
                 # update hand status trackers
+                first_move[curr_player_id] = False
                 ippatsu[curr_player_id] = False
                 if riichi_status[curr_player_id] == RiichiStatus.RIICHI_DISCARD:
                     riichi_status[curr_player_id] = RiichiStatus.RIICHI_NO_STICK
