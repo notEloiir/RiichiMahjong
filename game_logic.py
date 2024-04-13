@@ -66,6 +66,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
     after_a_kan = False
     stolen_kan = False
     waiting_tiles = [[False] * 34 for _ in range(4)]
+    nagashi_mangan = [False] * 4
 
     # PREP ROUND
     game_tiles = [Tile(t) for t in range(34 * 4)]
@@ -603,6 +604,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     open_melds_tile_ids[curr_player_id].append(new_meld_ids)
                     hand_is_closed[curr_player_id] = 0
                     discard_piles[from_who].pop()
+                    nagashi_mangan[from_who] = False
                     # TODO: (show) update board
                     if decision == MoveType.KAN:
                         event = Event(EventType.DRAW_TILE_AFTER_KAN, curr_player_id)
@@ -679,6 +681,17 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     event = Event(EventType.WINNER, [curr_player_id, [p for p in range(4) if wants[p] == MoveType.RON]])
 
             case EventType.WALL_EXHAUSTED:
+                # check nagashi mangan yaku conditions
+                for p in range(4):
+                    nagashi_mangan[p] &= \
+                        all(not discard_orders[i] or i in mc.TERMINAL_INDICES+list(range(26, 34)) for i in range(34))
+
+                    if nagashi_mangan[p]:
+                        event = Event(EventType.WINNER, [p, [p]])
+                        break
+                if any(nagashi_mangan):
+                    continue
+
                 has_tenpai = [0] * 4  # ready hand
                 for p in range(4):
                     has_tenpai[p] = int(shanten.Shanten().calculate_shanten(closed_hand_counts[p]) <= 0)
@@ -712,13 +725,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         is_daburu_riichi = double_riichi[p]
 
                         # pretty much impossible
-                        # TODO: track this (or don't)
-                        is_nagashi_mangan = False  # wtf...? https://riichi.wiki/Nagashi_mangan
-                        is_tenhou = False  # win on first draw (dealer)
-                        is_renhou = False  # ron on starting hand (no draws) as a first call of the round
-                        is_chiihou = False  # win on first draw, before any call (not dealer)
-                        is_open_riichi = False  # what?
-                        is_paarenchan = False  # if you keep dealership for 8 consecutive rounds
+                        is_nagashi_mangan = nagashi_mangan[p]  # 🗿 https://riichi.wiki/Nagashi_mangan
+                        is_tenhou = is_tsumo and turn_no == 1  # win on first draw (dealer)
+                        # ron on starting hand (no draws) as a first call of the round
+                        is_renhou = not is_tsumo and first_move[p] and all(not m for m in melds)
+                        # win on first draw, before any call (not dealer)
+                        is_chiihou = is_tsumo and turn_no > 1 and first_move[p]
+                        is_open_riichi = False  # this rule variation doesn't use open riichi yaku
+                        is_paarenchan = False  # this rule variation doesn't use parenchan yaku
 
                         # other info
                         player_wind = wind_from_int(seat_wind[p])
