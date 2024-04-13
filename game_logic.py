@@ -128,7 +128,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                 # check for nine orphans draw
                 if competitors[curr_player_id].is_human and first_move[curr_player_id] and sum(
-                        [closed_hand_counts[curr_player_id][i] for i in (0, 8, 9, 17, 18) + tuple(range(26, 34))]) >= 9:
+                        [closed_hand_counts[curr_player_id][i] for i in mc.TERMINAL_INDICES+list(range(26, 34))]) >= 9:
                     # TODO: (query player) ask player if they want to abort the round (draw)
                     abort = False
                     if abort:
@@ -170,11 +170,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         tile_to_call = tile.to_int()
                         tile_origin = curr_player_id
                     inputs = InputFeatures(device, curr_player_id, non_repeat_round_no, turn_no, dealer_id,
-                                           prevalent_wind, seat_wind[curr_player_id], closed_hand_counts[curr_player_id]
-                                           , open_hand_counts, discard_orders, hidden_tile_counts[curr_player_id],
-                                           visible_dora, hand_is_closed, hand_in_riichi, scores,
-                                           red5_closed_hand[curr_player_id], red5_open_hand, red5_discarded,
-                                           red5_hidden[curr_player_id], tile_to_call, tile_origin)
+                                           prevalent_wind, seat_wind[curr_player_id],
+                                           closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
+                                           hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed,
+                                           hand_in_riichi, scores, red5_closed_hand[curr_player_id], red5_open_hand,
+                                           red5_discarded, red5_hidden[curr_player_id], tile_to_call, tile_origin)
 
                     # query the model
                     discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
@@ -280,11 +280,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 else:
                     # query the model what to discard
                     inputs = InputFeatures(device, curr_player_id, non_repeat_round_no, turn_no, dealer_id,
-                                           prevalent_wind, seat_wind[curr_player_id], closed_hand_counts[curr_player_id]
-                                           , open_hand_counts, discard_orders, hidden_tile_counts[curr_player_id],
-                                           visible_dora, hand_is_closed, hand_in_riichi, scores,
-                                           red5_closed_hand[curr_player_id], red5_open_hand, red5_discarded,
-                                           red5_hidden[curr_player_id])
+                                           prevalent_wind, seat_wind[curr_player_id],
+                                           closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
+                                           hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed,
+                                           hand_in_riichi, scores, red5_closed_hand[curr_player_id], red5_open_hand,
+                                           red5_discarded, red5_hidden[curr_player_id])
 
                     # query the model
                     discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
@@ -435,7 +435,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                         # query the model
                         discard_tiles, call_tiles_curr, action = competitors[p].model.get_prediction(inputs.to_tensor())
-                        call_tiles[p] = call_tiles_curr
+                        call_tiles[p] = call_tiles_curr.tolist()
                         action = action.clone()
 
                         action[0], action[3], action[5] = 0., 0., 0.
@@ -547,7 +547,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                             best_chi_value = 0.
                             for i, chi in enumerate(possible_chi[curr_player_id]):
                                 for tile_id_mod in chi:
-                                    chi_value = float(call_tiles[curr_player_id][tile.to_int() + tile_id_mod])
+                                    chi_value = call_tiles[curr_player_id][tile.to_int() + tile_id_mod]
                                     if best_chi_value < chi_value:
                                         best_chi = possible_chi[curr_player_id][i]
                                         best_chi_value = chi_value
