@@ -57,7 +57,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
     red5_hidden = [[1] * 3 for _ in range(4)]
 
     # extra tracking
-    first_move = [1] * 4
+    first_move = [True] * 4
     four_quads_draw_flag = False
     riichi_status = [RiichiStatus.DEFAULT for _ in range(4)]
     furiten_status = [FuritenStatus.DEFAULT for _ in range(4)]
@@ -260,7 +260,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     case MoveType.RIICHI:
                         hand_in_riichi[curr_player_id] = turn_no
                         riichi_status[curr_player_id] = RiichiStatus.RIICHI_DISCARD
-                        double_riichi[curr_player_id] = bool(first_move[curr_player_id])
+                        double_riichi[curr_player_id] = first_move[curr_player_id]
 
                     case MoveType.TSUMO:
                         after_a_kan = event.what == EventType.DRAW_TILE_AFTER_KAN
@@ -323,8 +323,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     red5_discarded[discard_tile.to_int() // 9] = 1
 
                 waiting_tiles[curr_player_id] = [False] * 34
-                if 0 == shanten.Shanten().calculate_shanten(
-                    [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] for i in range(34)]):
+                if 0 == shanten.Shanten().calculate_shanten([closed_hand_counts[curr_player_id][i] +
+                                                             open_hand_counts[curr_player_id][i] for i in range(34)]):
                     for i in range(34):
                         if closed_hand_counts[curr_player_id][i]:
                             waiting_tiles[curr_player_id][i] = True
