@@ -346,8 +346,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 if riichi_status[curr_player_id] == RiichiStatus.RIICHI_DISCARD:
                     riichi_status[curr_player_id] = RiichiStatus.RIICHI_NO_STICK
                     ippatsu[curr_player_id] = True
-                elif riichi_status[curr_player_id] == RiichiStatus.RIICHI_NEW:
-                    riichi_status[curr_player_id] = RiichiStatus.RIICHI
                 if furiten_status[curr_player_id] == FuritenStatus.TEMP_FURITEN:
                     furiten_status[curr_player_id] = FuritenStatus.DEFAULT
                     # TODO: (show) update board
@@ -591,7 +589,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                     case MoveType.PASS:
                         if riichi_status[from_who] == RiichiStatus.RIICHI_NO_STICK:
-                            riichi_status[from_who] = RiichiStatus.RIICHI_NEW
+                            riichi_status[from_who] = RiichiStatus.RIICHI
                             # TODO: (show) put down riichi stick
 
                 # update hand status trackers

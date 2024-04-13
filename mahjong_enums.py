@@ -16,8 +16,7 @@ class RiichiStatus(Enum):
     DEFAULT = 0
     RIICHI_DISCARD = 1
     RIICHI_NO_STICK = 2
-    RIICHI_NEW = 3
-    RIICHI = 4
+    RIICHI = 3
 
 
 class FuritenStatus(Enum):
