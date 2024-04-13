@@ -30,12 +30,12 @@ class Event:
         self.who = who
 
 
-def simulate_round(competitors: list[Player], scores, non_repeat_round_no, device):
+def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_wind, device):
     hand_calculator = HandCalculator()
 
     # INIT
-    dealer_id = non_repeat_round_no % 4
-    prevalent_wind = (non_repeat_round_no // 4) % 4  # starting from east
+    dealer_id = (init_wind + non_repeat_round_no) % 4
+    prevalent_wind = (init_wind + non_repeat_round_no // 4) % 4
     seat_wind = [(non_repeat_round_no + i) % 4 for i in range(4)]
     turn_no = 1
     curr_player_id = dealer_id
@@ -801,7 +801,7 @@ def simulate_match(competitors, seed, device):
     non_repeat_round_no = 0
     round_no = 0
     while not (min(scores) <= 0 or (non_repeat_round_no >= 3 and max(scores) >= 500) or round_no >= 12):
-        scores, dealer_won = simulate_round(competitors, scores, non_repeat_round_no, device)
+        scores, dealer_won = simulate_round(competitors, scores, non_repeat_round_no, 0, device)
         round_no += 1
         if not dealer_won:
             non_repeat_round_no += 1
