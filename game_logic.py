@@ -35,7 +35,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
     # INIT
     dealer_id = (init_wind + non_repeat_round_no) % 4
-    prevalent_wind = (init_wind + non_repeat_round_no // 4) % 4
+    prevalent_wind = (init_wind + (non_repeat_round_no // 4)) % 4
     seat_wind = [(non_repeat_round_no + i) % 4 for i in range(4)]
     turn_no = 1
     curr_player_id = dealer_id
