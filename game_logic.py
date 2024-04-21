@@ -4,8 +4,9 @@ import torch
 from player import Player
 from mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
 from tile import Tile
+from shanten import correct_shanten
 
-from mahjong import shanten, agari
+from mahjong import agari
 from mahjong.meld import Meld
 from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
@@ -129,7 +130,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                 # check for nine orphans draw
                 if competitors[curr_player_id].is_human and first_move[curr_player_id] and sum(
-                        [closed_hand_counts[curr_player_id][i] for i in mc.TERMINAL_INDICES+list(range(26, 34))]) >= 9:
+                        [closed_hand_counts[curr_player_id][i] for i in
+                         mc.TERMINAL_INDICES + list(range(26, 34))]) >= 9:
                     # TODO: (query player) ask player if they want to abort the round (draw)
                     abort = False
                     if abort:
@@ -140,9 +142,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 is_closed_kan_possible = closed_hand_counts[curr_player_id][tile.to_int()] == 4
                 is_added_kan_possible = any(meld.type == Meld.PON and meld.tiles[0] // 4 == tile.to_int()
                                             for meld in melds[curr_player_id])
-                tiles_to_ready_hand = shanten.Shanten().calculate_shanten(closed_hand_counts[curr_player_id])
+                tiles_to_ready_hand = correct_shanten([closed_hand_counts[curr_player_id][i] +
+                                                       open_hand_counts[curr_player_id][i] for i in range(34)],
+                                                      melds[curr_player_id])
                 is_riichi_possible = tiles_to_ready_hand == 0 and hand_is_closed[curr_player_id] \
-                    and not hand_in_riichi[curr_player_id] and scores[curr_player_id] > 10
+                                     and not hand_in_riichi[curr_player_id] and scores[curr_player_id] > 10
                 is_tsumo_possible = False
                 if furiten_status[curr_player_id] == FuritenStatus.DEFAULT and \
                         agari.Agari().is_agari(
@@ -324,8 +328,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     red5_discarded[discard_tile.to_int() // 9] = 1
 
                 waiting_tiles[curr_player_id] = [False] * 34
-                if 0 == shanten.Shanten().calculate_shanten([closed_hand_counts[curr_player_id][i] +
-                                                             open_hand_counts[curr_player_id][i] for i in range(34)]):
+                if 0 == correct_shanten([closed_hand_counts[curr_player_id][i] +
+                                         open_hand_counts[curr_player_id][i] for i in range(34)],
+                                        melds[curr_player_id]):
                     for i in range(34):
                         if closed_hand_counts[curr_player_id][i]:
                             waiting_tiles[curr_player_id][i] = True
@@ -397,8 +402,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     is_pon_possible[p] = closed_hand_counts[p][tile.to_int()] >= 2 and not hand_in_riichi[p]
                     is_kan_possible[p] = closed_hand_counts[p][tile.to_int()] == 3 and not hand_in_riichi[p]
                     if furiten_status[p] == FuritenStatus.DEFAULT and agari.Agari().is_agari(
-                                [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
-                                 for i in range(34)], open_melds_tile_ids[p]):
+                            [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
+                             for i in range(34)], open_melds_tile_ids[p]):
                         tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]] + [tile.true_id()]
                         win_tile136 = tile.true_id()
                         hand_result = hand_calculator.estimate_hand_value(
@@ -627,8 +632,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     if p == curr_player_id:
                         continue
                     if furiten_status[p] == FuritenStatus.DEFAULT and agari.Agari().is_agari(
-                                [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
-                                 for i in range(34)], open_melds_tile_ids[p]):
+                            [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
+                             for i in range(34)], open_melds_tile_ids[p]):
                         tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]] + [tile.true_id()]
                         win_tile136 = tile.true_id()
                         hand_result = hand_calculator.estimate_hand_value(
@@ -637,7 +642,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                                 round_wind=wind_from_int(non_repeat_round_no)
                             ))
                         is_ron_possible[p] = hand_result.error is None and \
-                            (meld.opened or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
+                                             (meld.opened or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
                         # robbing a kan works only on added kan, or closed kan + thirteen orphans
 
                 event = Event(EventType.DRAW_TILE_AFTER_KAN, curr_player_id)
@@ -684,7 +689,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 # check nagashi mangan yaku conditions
                 for p in range(4):
                     nagashi_mangan[p] &= \
-                        all(not discard_orders[i] or i in mc.TERMINAL_INDICES+list(range(26, 34)) for i in range(34))
+                        all(not discard_orders[i] or i in mc.TERMINAL_INDICES + list(range(26, 34)) for i in range(34))
 
                     if nagashi_mangan[p]:
                         event = Event(EventType.WINNER, [p, [p]])
@@ -694,7 +699,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                 has_tenpai = [0] * 4  # ready hand
                 for p in range(4):
-                    has_tenpai[p] = int(shanten.Shanten().calculate_shanten(closed_hand_counts[p]) <= 0)
+                    has_tenpai[p] = int(correct_shanten([closed_hand_counts[p][i] +
+                                                         open_hand_counts[p][i] for i in range(34)], melds[p]) <= 0)
                 match sum(has_tenpai):
                     case 3:
                         for p in range(4):
