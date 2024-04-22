@@ -12,6 +12,7 @@ from training_data_classes import TrainingData
 import torch.nn as nn
 import torch.optim as optim
 import torch.cuda
+import torch.nn.functional as F
 
 
 class MahjongNN(nn.Module):
@@ -30,7 +31,6 @@ class MahjongNN(nn.Module):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
             self.layers.append(nn.ReLU())
         self.layers.append(nn.Linear(hidden_size, self.output_size))
-        self.layers.append(nn.Sigmoid())
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
         self.device = device
@@ -46,7 +46,7 @@ class MahjongNN(nn.Module):
         out = self(input_vector.unsqueeze(0))[0]
 
         # discard_tiles, call_tiles, action
-        return torch.split(out, [34, 34, 8])
+        return torch.split(F.sigmoid(out), [34, 34, 8])
 
     def train_on_replay(self, data: list[TrainingData], epochs_no=10, max_batch_size=200):
         n = len(data)
