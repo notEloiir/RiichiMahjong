@@ -12,7 +12,6 @@ from training_data_classes import TrainingData
 import torch.nn as nn
 import torch.optim as optim
 import torch.cuda
-import torch.nn.functional as F
 
 
 class MahjongNN(nn.Module):
@@ -31,6 +30,7 @@ class MahjongNN(nn.Module):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
             self.layers.append(nn.ReLU())
         self.layers.append(nn.Linear(hidden_size, self.output_size))
+        self.layers.append(nn.Sigmoid())
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
         self.device = device
@@ -46,7 +46,7 @@ class MahjongNN(nn.Module):
         out = self(input_vector.unsqueeze(0))[0]
 
         # discard_tiles, call_tiles, action
-        return torch.split(F.sigmoid(out), [34, 34, 8])
+        return torch.split(out, [34, 34, 8])
 
     def train_on_replay(self, data: list[TrainingData], epochs_no=10, max_batch_size=200):
         n = len(data)
@@ -180,7 +180,7 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
                      [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], torch.device('cpu'),
                      thread_no=4)
             """
-            td_len = len(training_data)
+            # td_len = len(training_data)
             # processing data works much faster on cpu, training much faster on cuda
             # TODO: try to optimize?
             for td in training_data:
@@ -189,12 +189,18 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
             print("Batch training data processed:\t\t\t\t\t\t\t\t\t", time.time() - start)
             start = time.time()
 
+            model.train_on_replay(training_data)
+            print("Batch training complete:\t\t\t\t\t\t\t\t\t", time.time() - start)
+
+            """
             model.train_on_replay(training_data[:int(td_len * 0.9)])
             print("Batch training complete:\t\t\t\t\t\t\t\t\t", time.time() - start)
             start = time.time()
-
+            
+            #  versus (compare_models.py) now used to compare models
             model.evaluate_on_replay(training_data[int(td_len * 0.9):])
             print("Batch evaluation complete:\t\t\t\t\t\t\t\t\t", time.time() - start)
+            """
 
         except (ValueError, TypeError, ParseError):
             # so that you don't lose progress when database entry is corrupted, and you realize 8h later
