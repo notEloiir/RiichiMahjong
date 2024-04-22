@@ -3,7 +3,8 @@ from operator import add
 from game_logic import simulate_match
 
 
-def versus(competitors, how_many, init_seed, device):
+def versus(competitors, how_many, device):
+    init_seed = 3511  # for debugging
 
     total = [0, 0, 0, 0]
     for match in range(how_many):

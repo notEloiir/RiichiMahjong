@@ -12,18 +12,14 @@ class EventType(Enum):
     AFTER_KAN = 7
 
 
-class RiichiStatus(Enum):
+class HandStatus(Enum):
     DEFAULT = 0
     RIICHI_DISCARD = 1
     RIICHI_NO_STICK = 2
-    RIICHI = 3
-
-
-class FuritenStatus(Enum):
-    DEFAULT = 0
-    TEMP_FURITEN = 1
-    DISCARD_FURITEN = 2
-    PERM_FURITEN = 3
+    RIICHI_NEW = 3
+    RIICHI = 4
+    TEMP_FURITEN = 5
+    PERM_FURITEN = 6
 
 
 class MoveType(Enum):
