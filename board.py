@@ -32,28 +32,40 @@ class Board:
             align="right",
         )
 
-        a = 0.1 * self.height / 2
-        s = 0.01 * self.height
+        center_offset = 0.1 * self.height / 2
+        pile_spacing = 0.01 * self.height
         self.discard_pile_south = discard_pile.DiscardPile(
-            position=(0.5 * self.width - a + s, 0.5 * self.height + a + s),
+            position=(
+                0.5 * self.width - center_offset + pile_spacing,
+                0.5 * self.height + center_offset + pile_spacing,
+            ),
             size=(0.6 * self.width, 0.2 * self.height),
             rotation=0,
         )
         self.discard_pile_south.update_tiles(random.sample(range(135), 16))
         self.discard_pile_east = discard_pile.DiscardPile(
-            position=(0.5 * self.width + a + s, 0.5 * self.height + a - s),
+            position=(
+                0.5 * self.width + center_offset + pile_spacing,
+                0.5 * self.height + center_offset - pile_spacing,
+            ),
             size=(0.6 * self.width, 0.2 * self.height),
             rotation=1,
         )
         self.discard_pile_east.update_tiles(random.sample(range(135), 16))
         self.discard_pile_north = discard_pile.DiscardPile(
-            position=(0.5 * self.width + a - s, 0.5 * self.height - a - s),
+            position=(
+                0.5 * self.width + center_offset - pile_spacing,
+                0.5 * self.height - center_offset - pile_spacing,
+            ),
             size=(0.6 * self.width, 0.2 * self.height),
             rotation=2,
         )
         self.discard_pile_north.update_tiles(random.sample(range(135), 16))
         self.discard_pile_west = discard_pile.DiscardPile(
-            position=(0.5 * self.width - a - s, 0.5 * self.height - a + s),
+            position=(
+                0.5 * self.width - center_offset - pile_spacing,
+                0.5 * self.height - center_offset + pile_spacing,
+            ),
             size=(0.6 * self.width, 0.2 * self.height),
             rotation=3,
         )
@@ -73,7 +85,10 @@ class Board:
             align="left",
         )
         self.discarding_button = ui.Button(
-            position=(0.5 * self.width + 0.5 * 0.9 * self.height - 0.1 * self.width, 0.80 * self.height),
+            position=(
+                0.5 * self.width + 0.5 * 0.9 * self.height - 0.1 * self.width,
+                0.80 * self.height,
+            ),
             size=(0.1 * self.width, 0.05 * self.height),
             text="Confirm",
         )
@@ -99,7 +114,7 @@ class Board:
         self.hand_north.update_tiles(sorted(random.sample(range(135), 14)))
 
         self.hand_west = hand.Hand(
-            position=(0.1 * self.height, 0.05 * self.height),
+            position=(0.15 * self.height, 0.05 * self.height),
             size=(0.9 * self.height, 0.1 * self.height),
             rotation=3,
         )
