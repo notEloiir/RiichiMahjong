@@ -50,58 +50,42 @@ class MahjongNN(nn.Module):
         # discard_tiles, call_tiles, action
         return torch.split(F.sigmoid(out), [34, 34, 8])
 
-    def train_on_replay(self, data: list[TrainingData], epochs_no=10, max_batch_size=200):
-        n = len(data)
-        batches_no = math.ceil(n / max_batch_size)
+    def train_on_replay(self, data: list[TrainingData], epochs_no=10):
 
-        inputs = [torch.stack([action.input_tensor for action in
-                               data[b * max_batch_size:(b + 1) * max_batch_size]], dim=0) for b in range(batches_no)]
-        labels = [torch.stack([action.label_tensor for action in
-                               data[b * max_batch_size:(b + 1) * max_batch_size]], dim=0) for b in range(batches_no)]
-        pos_weights = [torch.stack([action.pos_weight for action in data[b * max_batch_size:(b + 1) * max_batch_size]]
-                                   , dim=0) for b in range(batches_no)]
+        inputs = torch.cat([action.input_tensor.unsqueeze(0) for action in data], dim=0)
+        labels = torch.cat([action.label_tensor.unsqueeze(0) for action in data], dim=0)
+        pos_weights = torch.cat([action.pos_weight.unsqueeze(0) for action in data], dim=0)
 
         self.train()
         for epoch in range(epochs_no):
-            for batch in range(batches_no):
-                # forward pass
-                outputs = self(inputs[batch])
+            # forward pass
+            outputs = self(inputs)
 
-                # get loss
-                criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights[batch])
-                loss = criterion(outputs, labels[batch])
+            # get loss
+            criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights)
+            loss = criterion(outputs, labels)
 
-                # backward pass and optimization
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                self.scheduler.step(loss.item())
+            # backward pass and optimization
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
 
-    def evaluate_on_replay(self, data, max_batch_size=32):
-        n = len(data)
-        batches_no = math.ceil(n / max_batch_size)
-        total_loss = 0.0
+    def evaluate_on_replay(self, data):
 
-        inputs = [torch.stack([action.input_tensor for action in
-                               data[b * max_batch_size:(b + 1) * max_batch_size]], dim=0) for b in range(batches_no)]
-        labels = [torch.stack([action.label_tensor for action in
-                               data[b * max_batch_size:(b + 1) * max_batch_size]], dim=0) for b in range(batches_no)]
-        pos_weights = [torch.stack([action.pos_weight for action in data[b * max_batch_size:(b + 1) * max_batch_size]]
-                                   , dim=0) for b in range(batches_no)]
+        inputs = torch.cat([action.input_tensor.unsqueeze(0) for action in data], dim=0)
+        labels = torch.cat([action.label_tensor.unsqueeze(0) for action in data], dim=0)
+        pos_weights = torch.cat([action.pos_weight.unsqueeze(0) for action in data], dim=0)
 
         self.eval()
         with torch.no_grad():
-            for batch in range(batches_no):
-                # forward pass
-                outputs = self(inputs[batch])
+            # forward pass
+            outputs = self(inputs)
 
-                # get loss
-                criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights[batch])
-                loss = criterion(outputs, labels[batch])
+            # get loss
+            criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights)
+            loss = criterion(outputs, labels)
 
-                total_loss += loss.item()
-
-        average_loss = total_loss / len(data)
+        average_loss = loss.item() / len(data)
         print("Average Loss on Evaluation Dataset:\t", average_loss)
 
 
