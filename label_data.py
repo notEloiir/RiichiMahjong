@@ -14,7 +14,7 @@ def count_tiles(tiles: list[Tile]):
     return counts
 
 
-def augument_data(orig_data: TrainingData, discard_orders, move_type: MoveType, device) -> list[TrainingData]:
+def augment_data(orig_data: TrainingData, discard_orders, move_type: MoveType, device) -> list[TrainingData]:
     # augment the minority class samples
     match move_type:
         case MoveType.CHI | MoveType.PON:
@@ -37,7 +37,7 @@ def augument_data(orig_data: TrainingData, discard_orders, move_type: MoveType, 
                         discard_orders_shuffled[p][i1], discard_orders_shuffled[p][i0]
         return discard_orders_shuffled
 
-    augumented_data = []
+    augmented_data = []
     for i in range(how_many):
         data_point = TrainingData(None, None, device)
         data_point.inputs = orig_data.inputs  # reference
@@ -46,8 +46,8 @@ def augument_data(orig_data: TrainingData, discard_orders, move_type: MoveType, 
         data_point.input_tensor = data_point.inputs.to_tensor()
         data_point.label_tensor = orig_data.label_tensor  # reference
         data_point.pos_weight = orig_data.pos_weight  # reference
-        augumented_data.append(data_point)
-    return augumented_data
+        augmented_data.append(data_point)
+    return augmented_data
 
 
 def get_data_from_replay(matches_data: list[MatchData], device):
@@ -151,8 +151,8 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                     data_point.set_weight(move_data.move_type)
                     data_point.proc()
 
-                    augumented_data = augument_data(data_point, discard_orders, move_data.move_type, device)
-                    training_data.extend(augumented_data)
+                    augmented_data = augment_data(data_point, discard_orders, move_data.move_type, device)
+                    training_data.extend(augmented_data)
                     # end inputs
 
                 # GAME LOGIC
