@@ -33,7 +33,7 @@ class MahjongNN(nn.Module):
         self.layers.append(nn.Linear(hidden_size, self.output_size))
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=10, factor=0.1)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=20, factor=0.5)
 
         self.device = device
         self.to(device)
@@ -69,6 +69,7 @@ class MahjongNN(nn.Module):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            self.scheduler.step(loss.item())
 
     def evaluate_on_replay(self, data):
 
