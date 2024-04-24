@@ -168,7 +168,12 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
                      [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], torch.device('cpu'),
                      thread_no=4)
             """
-            # td_len = len(training_data)
+            td_len = len(training_data)
+
+            if not td_len:
+                print("No matches in batch found suitable. Increase batch size or loosen requirements (parse_logs.py)")
+                continue
+
             # processing data works much faster on cpu, training much faster on cuda
             # TODO: try to optimize?
             for td in training_data:

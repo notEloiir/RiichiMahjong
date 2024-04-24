@@ -99,6 +99,25 @@ def parse_match_log(log_raw):
 
     for event in match_parsed.iter():
         match event.tag:
+            # reference: https://m77.hatenablog.com/entry/2017/05/21/214529 (yes, seriously)
+
+            case "GO":
+                if "type" in event.attrib.keys():
+                    match_type = int(event.attrib["type"])
+                    wanted_bits = 0b0000_0000_0001
+                    unwanted_bits = 0b1111_0001_0110
+                    # don't care about the rest
+
+                    if not((match_type & wanted_bits) == wanted_bits and (match_type & unwanted_bits) == 0):
+                        # table settings aren't suitable for training
+                        return match_info
+
+            case "UN":
+                if "dan" in event.attrib.keys():
+                    if max(int(rank) for rank in event.attrib["dan"].split(',')) < 17:
+                        # filter low rank games
+                        return match_info
+
             case "INIT":  # start round
                 new_round = RoundData(int(event.attrib["oya"]), Tile(int(event.attrib["seed"][-1])))
                 for i in range(4):
