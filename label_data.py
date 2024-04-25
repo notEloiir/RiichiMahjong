@@ -14,42 +14,6 @@ def count_tiles(tiles: list[Tile]):
     return counts
 
 
-def augment_data(orig_data: TrainingData, discard_orders, move_type: MoveType, device) -> list[TrainingData]:
-    # augment the minority class samples
-    match move_type:
-        case MoveType.CHI | MoveType.PON:
-            how_many = 3
-        case MoveType.RIICHI:
-            how_many = 5
-        case MoveType.KAN | MoveType.TSUMO | MoveType.RON:
-            how_many = 10
-        case _:
-            return []
-
-    def shuffle_discards(discard_orders):
-        discard_orders_shuffled = [discard_orders[p].copy() for p in range(4)]
-        for p in range(4):
-            for _ in range(20):
-                i0 = random.randint(0, 33)
-                i1 = random.randint(0, 33)
-                if discard_orders[p][i0] and discard_orders[p][i1]:
-                    discard_orders_shuffled[p][i0], discard_orders_shuffled[p][i1] = \
-                        discard_orders_shuffled[p][i1], discard_orders_shuffled[p][i0]
-        return discard_orders_shuffled
-
-    augmented_data = []
-    for i in range(how_many):
-        data_point = TrainingData(None, None, device)
-        data_point.inputs = orig_data.inputs  # reference
-        data_point.inputs.discard_piles = torch.tensor(shuffle_discards(discard_orders),
-                                                       device=device, dtype=torch.float32)
-        data_point.input_tensor = data_point.inputs.to_tensor()
-        data_point.label_tensor = orig_data.label_tensor  # reference
-        data_point.pos_weight = orig_data.pos_weight  # reference
-        augmented_data.append(data_point)
-    return augmented_data
-
-
 def get_data_from_replay(matches_data: list[MatchData], device):
     # features and labels to train the discard and call models
     training_data: list[TrainingData] = []
@@ -141,17 +105,17 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                         tile_to_call = move_data.tile.to_int()
                         tile_origin = prev_player_id
 
-                    training_inputs = InputFeatures(device, curr_player_id, round_no, turn_no, round_data.dealer,
-                                                    prevalent_wind, seat_wind, closed_hand_counts[curr_player_id],
-                                                    open_hand_counts, discard_orders, hidden_tile_counts,
-                                                    visible_dora_ind, hand_is_closed, hand_in_riichi,
-                                                    round_data.score_before, red5_closed_hand, red5_open_hand,
-                                                    red5_discarded, red5_hidden, tile_to_call, tile_origin)
-                    data_point.inputs = training_inputs
-                    data_point.set_weight(move_data.move_type)
-                    data_point.proc()
+                    data_point.inputs = InputFeatures.from_args(
+                        device, curr_player_id, round_no, turn_no, round_data.dealer, prevalent_wind, seat_wind,
+                        closed_hand_counts[curr_player_id], open_hand_counts, discard_orders, hidden_tile_counts,
+                        visible_dora_ind, hand_is_closed, hand_in_riichi, round_data.score_before, red5_closed_hand,
+                        red5_open_hand, red5_discarded, red5_hidden, tile_to_call, tile_origin,
+                        augment=True, move_type=move_data.move_type)
+                    data_point.set_weight(move_data.move_type, turn_no, hand_in_riichi)
 
-                    augmented_data = augment_data(data_point, discard_orders, move_data.move_type, device)
+                    augmented_data = [TrainingData(augmented_features, data_point.label, device, data_point.pos_weight)
+                                      for augmented_features in data_point.inputs.augmented_features]
+
                     training_data.extend(augmented_data)
                     # end inputs
 

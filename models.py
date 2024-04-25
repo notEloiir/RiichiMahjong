@@ -1,4 +1,3 @@
-import math
 import os
 import time
 import traceback
@@ -7,7 +6,6 @@ from db_connect import get_match_log_data
 from parse_logs import parse_match_log
 from label_data import get_data_from_replay
 from training_data_classes import TrainingData
-# import threading
 
 import torch.nn as nn
 import torch.optim as optim
@@ -31,6 +29,7 @@ class MahjongNN(nn.Module):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
             self.layers.append(nn.ReLU())
         self.layers.append(nn.Linear(hidden_size, self.output_size))
+        # sigmoid in is get_prediction() for usage, for training it's in BCEWithLogitsLoss
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=20, factor=0.5)
@@ -52,8 +51,8 @@ class MahjongNN(nn.Module):
 
     def train_on_replay(self, data: list[TrainingData], epochs_no=10):
 
-        inputs = torch.cat([action.input_tensor.unsqueeze(0) for action in data], dim=0)
-        labels = torch.cat([action.label_tensor.unsqueeze(0) for action in data], dim=0)
+        inputs = torch.cat([action.inputs.tensor.unsqueeze(0) for action in data], dim=0)
+        labels = torch.cat([action.label.tensor.unsqueeze(0) for action in data], dim=0)
         pos_weights = torch.cat([action.pos_weight.unsqueeze(0) for action in data], dim=0)
 
         self.train()
@@ -73,8 +72,8 @@ class MahjongNN(nn.Module):
 
     def evaluate_on_replay(self, data):
 
-        inputs = torch.cat([action.input_tensor.unsqueeze(0) for action in data], dim=0)
-        labels = torch.cat([action.label_tensor.unsqueeze(0) for action in data], dim=0)
+        inputs = torch.cat([action.inputs.tensor.unsqueeze(0) for action in data], dim=0)
+        labels = torch.cat([action.label.tensor.unsqueeze(0) for action in data], dim=0)
         pos_weights = torch.cat([action.pos_weight.unsqueeze(0) for action in data], dim=0)
 
         self.eval()
@@ -162,7 +161,7 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
         start = time.time()
         try:
             training_data = get_data_from_replay(
-                [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], torch.device('cpu'))
+                [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], device)
             """
             training_data = get_data_from_replay_threaded(
                      [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], torch.device('cpu'),
@@ -173,11 +172,6 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
             if not td_len:
                 print("No matches in batch found suitable. Increase batch size or loosen requirements (parse_logs.py)")
                 continue
-
-            # processing data works much faster on cpu, training much faster on cuda
-            # TODO: try to optimize?
-            for td in training_data:
-                td.to(device)
 
             print("Batch training data processed:\t\t\t\t\t\t\t\t\t", time.time() - start)
             start = time.time()
@@ -193,6 +187,7 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
             #  versus (compare_models.py) now used to compare models
             model.evaluate_on_replay(training_data[int(td_len * 0.9):])
             print("Batch evaluation complete:\t\t\t\t\t\t\t\t\t", time.time() - start)
+            print("Current learning rate:", model.scheduler.get_last_lr())
             """
 
         except (ValueError, TypeError, ParseError):
