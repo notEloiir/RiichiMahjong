@@ -761,14 +761,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                                                                           melds=melds[p], config=config,
                                                                           dora_indicators=dora_indicators136)
 
-                        if hand_result.error:
-                            print(agari.Agari().is_agari(
-                                [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] for i in
-                                 range(34)],
-                                open_melds_tile_ids[curr_player_id]
-                            ))
-                            raise Exception(hand_result.error)
-
                         # show result
                         # TODO: (show) show hand result in GUI instead
                         print(hand_result.han, hand_result.fu)

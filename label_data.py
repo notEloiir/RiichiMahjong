@@ -1,10 +1,8 @@
-import random
 from mahjong_enums import MoveType
 from tile import Tile
 from training_data_classes import TrainingData, InputFeatures, Label
 from mahjong import shanten
 from parse_logs import MatchData, MoveData
-import torch
 
 
 def count_tiles(tiles: list[Tile]):
@@ -31,9 +29,9 @@ def get_data_from_replay(matches_data: list[MatchData], device):
             closed_hand: list[list[Tile]] = round_data.init_hands.copy()
             open_hand: list[list[Tile]] = [[] for _ in range(4)]
             discard_pile: list[list[Tile]] = [[] for _ in range(4)]
-            discard_orders = [[0]*34 for _ in range(4)]
-            hand_in_riichi = [0]*4
-            hand_is_closed = [1]*4
+            discard_orders = [[0] * 34 for _ in range(4)]
+            hand_in_riichi = [0] * 4
+            hand_is_closed = [1] * 4
             visible_dora_ind = [0] * 34
             visible_dora_ind[round_data.initial_dora.to_int()] = 1
             curr_player_id = round_data.dealer
@@ -49,14 +47,14 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                 if move_data.move_type != MoveType.DRAW and curr_player_id != round_data.dealt_in \
                         and (not hand_in_riichi[curr_player_id] or move_data.move_type == MoveType.TSUMO or
                              move_data.move_type == MoveType.RON):
-                    label_discard_tile = [0]*34
-                    label_call_tile = [0]*34
-                    label_move_type = [0]*8
+                    label_discard_tile = [0] * 34
+                    label_call_tile = [0] * 34
+                    label_move_type = [0] * 8
 
                     if move_data.move_type == MoveType.DISCARD:
                         label_discard_tile[move_data.tile.to_int()] = 1
                     if move_data.move_type != MoveType.DRAW:
-                        label_move_type[move_data.move_type.value-1] = 1
+                        label_move_type[move_data.move_type.value - 1] = 1
                     if move_data.move_type == MoveType.CHI or move_data.move_type == MoveType.PON or \
                             move_data.move_type == MoveType.KAN:
                         for tile in move_data.base:
@@ -80,10 +78,10 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                         for p in range(4):
                             hidden_tile_counts[tile] -= (discard_counts[p][tile] + open_hand_counts[p][tile])
 
-                    red5_closed_hand = [0]*3
-                    red5_open_hand = [[0]*3 for _ in range(4)]
-                    red5_discarded = [0]*3
-                    red5_hidden = [0]*3
+                    red5_closed_hand = [0] * 3
+                    red5_open_hand = [[0] * 3 for _ in range(4)]
+                    red5_discarded = [0] * 3
+                    red5_hidden = [0] * 3
                     for tile in closed_hand[curr_player_id]:
                         if tile.is_red5():
                             red5_closed_hand[tile.to_int() // 9] = 1
@@ -157,7 +155,8 @@ def get_data_from_replay(matches_data: list[MatchData], device):
                     continue
 
                 # RIICHI, TSUMO
-                if len(open_hand[curr_player_id]) == 0 and move_data.move_type == MoveType.DRAW and not hand_in_riichi[curr_player_id]:
+                if len(open_hand[curr_player_id]) == 0 and move_data.move_type == MoveType.DRAW and not hand_in_riichi[
+                    curr_player_id]:
                     closed_hand_count = count_tiles(closed_hand[curr_player_id])
 
                     shanten_cnt = shanten.Shanten().calculate_shanten(closed_hand_count)
@@ -222,4 +221,3 @@ def get_data_from_replay(matches_data: list[MatchData], device):
             prev_dealer = round_data.dealer
 
     return training_data
-
