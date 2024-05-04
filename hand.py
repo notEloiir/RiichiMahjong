@@ -2,21 +2,22 @@ import pygame, tile_sprite, settings
 
 
 class Hand:
-    def __init__(self, position, size, rotation):
+    def __init__(self, position, size, rotation, hidden=True):
         self.position = position
         self.size = size
         self.rotation = rotation
-        self.tiles = pygame.sprite.Group()
+        self.closed_tiles = pygame.sprite.Group()
+        self.open_tiles = pygame.sprite.Group()
+        self.hidden = hidden
 
-    def update_tiles(self, tile_ids):
-        self.tiles.empty()
+    def update_tiles(self, closed_tiles, open_tiles):
+        closed_tiles.sort(key=lambda tile: tile.true_id())
 
         spacing = 3
-        tile_width = (self.size[0] - 13 * spacing) / 15
+        tile_width = (self.size[0] - 18 * spacing) / 19
         tile_height = 4 / 3 * tile_width
         tile_size = (
-            tile_width,
-            tile_height,
+            tile_width, tile_height
         )
 
         if self.rotation == 0:
@@ -52,30 +53,43 @@ class Hand:
             elif self.rotation == 3:
                 return (base_x + i * delta_x, base_y + i * delta_y)
 
-        for i, tile_id in enumerate(tile_ids):
-            self.tiles.add(
-                tile_sprite.TileSprite(get_tile_position(i), tile_size, tile_id, self.rotation)
-            )
+        if closed_tiles != self.closed_tiles:
+            self.closed_tiles.empty()
+            i = 0
+            for tile in closed_tiles:
+                self.closed_tiles.add(
+                    tile_sprite.TileSprite(get_tile_position(i), tile_size, tile, self.rotation, hidden=self.hidden)
+                )
+                i += 1
+
+        if open_tiles != self.open_tiles:
+            self.open_tiles.empty()
+            i = 19 - len(open_tiles)
+
+            for tile in open_tiles:
+                self.open_tiles.add(
+                    tile_sprite.TileSprite(get_tile_position(i), tile_size, tile, self.rotation)
+                )
+                i += 1
 
     def draw(self, display_surface):
-        self.tiles.update()
-        self.tiles.draw(display_surface)
-
+        self.closed_tiles.draw(display_surface)
+        self.open_tiles.draw(display_surface)
 
 class PlayerHand(Hand):
     def __init__(self, position, size, rotation=0):
-        super().__init__(position, size, rotation)
+        super().__init__(position, size, rotation, False)
         self.selected_tile = None
 
     def handle_click(self, mouse_pos):
-        for tile in self.tiles:
+        for tile in self.closed_tiles:
             if tile.rect.collidepoint(mouse_pos):
                 self.selected_tile = tile
 
     def draw(self, display_surface):
         super().draw(display_surface)
 
-        for tile in self.tiles:
+        for tile in self.closed_tiles:
             if tile.rect.collidepoint(pygame.mouse.get_pos()):
                 pygame.draw.circle(
                     display_surface,
@@ -84,7 +98,7 @@ class PlayerHand(Hand):
                     5,
                     2,
                 )
-            if self.selected_tile and tile.tile_id == self.selected_tile.tile_id:
+            if self.selected_tile and tile.tile == self.selected_tile.tile:
                 pygame.draw.circle(
                     display_surface,
                     settings.PRIMARY_COLOR,

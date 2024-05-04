@@ -1,5 +1,7 @@
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
+# SCREEN_WIDTH = 720
+# SCREEN_HEIGHT = 480
 
 SYS_FONT_NAME = 'ariel'
 FONT_NAME = "resources/fonts/go3v2.ttf"
