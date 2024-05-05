@@ -2,10 +2,11 @@ import random
 from training_data_classes import InputFeatures
 import torch
 from player import Player
-from mahjong_enums import EventType, HandStatus, MoveType
+from mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
 from tile import Tile
+from shanten import correct_shanten
 
-from mahjong import shanten, agari
+from mahjong import agari
 from mahjong.meld import Meld
 from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
@@ -30,12 +31,12 @@ class Event:
         self.who = who
 
 
-def simulate_round(competitors: list[Player], scores, non_repeat_round_no, device):
+def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_wind, device):
     hand_calculator = HandCalculator()
 
     # INIT
-    dealer_id = non_repeat_round_no % 4
-    prevalent_wind = (non_repeat_round_no // 4) % 4  # starting from east
+    dealer_id = (init_wind + non_repeat_round_no) % 4
+    prevalent_wind = (init_wind + (non_repeat_round_no // 4)) % 4
     seat_wind = [(non_repeat_round_no + i) % 4 for i in range(4)]
     turn_no = 1
     curr_player_id = dealer_id
@@ -57,13 +58,16 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
     red5_hidden = [[1] * 3 for _ in range(4)]
 
     # extra tracking
-    first_move = [1] * 4
+    first_move = [True] * 4
     four_quads_draw_flag = False
-    hand_status = [HandStatus.DEFAULT for _ in range(4)]
+    riichi_status = [RiichiStatus.DEFAULT for _ in range(4)]
+    furiten_status = [FuritenStatus.DEFAULT for _ in range(4)]
     double_riichi = [False] * 4
     ippatsu = [False] * 4
     after_a_kan = False
     stolen_kan = False
+    waiting_tiles = [[False] * 34 for _ in range(4)]
+    nagashi_mangan = [False] * 4
 
     # PREP ROUND
     game_tiles = [Tile(t) for t in range(34 * 4)]
@@ -126,7 +130,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                 # check for nine orphans draw
                 if competitors[curr_player_id].is_human and first_move[curr_player_id] and sum(
-                        [closed_hand_counts[curr_player_id][i] for i in (0, 8, 9, 17, 18) + tuple(range(26, 34))]) >= 9:
+                        [closed_hand_counts[curr_player_id][i] for i in
+                         mc.TERMINAL_INDICES + list(range(26, 34))]) >= 9:
                     # TODO: (query player) ask player if they want to abort the round (draw)
                     abort = False
                     if abort:
@@ -137,12 +142,13 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 is_closed_kan_possible = closed_hand_counts[curr_player_id][tile.to_int()] == 4
                 is_added_kan_possible = any(meld.type == Meld.PON and meld.tiles[0] // 4 == tile.to_int()
                                             for meld in melds[curr_player_id])
-                tiles_to_ready_hand = shanten.Shanten().calculate_shanten(closed_hand_counts[curr_player_id])
+                tiles_to_ready_hand = correct_shanten([closed_hand_counts[curr_player_id][i] +
+                                                       open_hand_counts[curr_player_id][i] for i in range(34)],
+                                                      melds[curr_player_id])
                 is_riichi_possible = tiles_to_ready_hand == 0 and hand_is_closed[curr_player_id] \
-                                     and not hand_in_riichi[curr_player_id]
+                                     and not hand_in_riichi[curr_player_id] and scores[curr_player_id] > 10
                 is_tsumo_possible = False
-                if hand_status[curr_player_id] != HandStatus.TEMP_FURITEN and \
-                        hand_status[curr_player_id] != HandStatus.PERM_FURITEN and \
+                if furiten_status[curr_player_id] == FuritenStatus.DEFAULT and \
                         agari.Agari().is_agari(
                             [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] +
                              int(tile.to_int() == i) for i in range(34)], open_melds_tile_ids[curr_player_id]):
@@ -169,11 +175,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         tile_to_call = tile.to_int()
                         tile_origin = curr_player_id
                     inputs = InputFeatures(device, curr_player_id, non_repeat_round_no, turn_no, dealer_id,
-                                           prevalent_wind, seat_wind[curr_player_id], closed_hand_counts[curr_player_id]
-                                           , open_hand_counts, discard_orders, hidden_tile_counts[curr_player_id],
-                                           visible_dora, hand_is_closed, hand_in_riichi, scores,
-                                           red5_closed_hand[curr_player_id], red5_open_hand, red5_discarded,
-                                           red5_hidden[curr_player_id], tile_to_call, tile_origin)
+                                           prevalent_wind, seat_wind[curr_player_id],
+                                           closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
+                                           hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed,
+                                           hand_in_riichi, scores, red5_closed_hand[curr_player_id], red5_open_hand,
+                                           red5_discarded, red5_hidden[curr_player_id], tile_to_call, tile_origin)
 
                     # query the model
                     discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
@@ -258,8 +264,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                     case MoveType.RIICHI:
                         hand_in_riichi[curr_player_id] = turn_no
-                        hand_status[curr_player_id] = HandStatus.RIICHI_DISCARD
-                        double_riichi[curr_player_id] = bool(first_move[curr_player_id])
+                        riichi_status[curr_player_id] = RiichiStatus.RIICHI_DISCARD
+                        double_riichi[curr_player_id] = first_move[curr_player_id]
 
                     case MoveType.TSUMO:
                         after_a_kan = event.what == EventType.DRAW_TILE_AFTER_KAN
@@ -271,7 +277,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 event = Event(EventType.DISCARD_TILE, curr_player_id)
 
             case EventType.DISCARD_TILE:
-                if hand_in_riichi[curr_player_id] and hand_status[curr_player_id] != HandStatus.RIICHI_DISCARD:
+                if riichi_status[curr_player_id].value > 1:  # after initial riichi discard
                     discard_tile = closed_hands[curr_player_id][-1]
                 elif competitors[curr_player_id].is_human:
                     # TODO: (query player) ask player what to discard
@@ -279,11 +285,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 else:
                     # query the model what to discard
                     inputs = InputFeatures(device, curr_player_id, non_repeat_round_no, turn_no, dealer_id,
-                                           prevalent_wind, seat_wind[curr_player_id], closed_hand_counts[curr_player_id]
-                                           , open_hand_counts, discard_orders, hidden_tile_counts[curr_player_id],
-                                           visible_dora, hand_is_closed, hand_in_riichi, scores,
-                                           red5_closed_hand[curr_player_id], red5_open_hand, red5_discarded,
-                                           red5_hidden[curr_player_id])
+                                           prevalent_wind, seat_wind[curr_player_id],
+                                           closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
+                                           hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed,
+                                           hand_in_riichi, scores, red5_closed_hand[curr_player_id], red5_open_hand,
+                                           red5_discarded, red5_hidden[curr_player_id])
 
                     # query the model
                     discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
@@ -321,43 +327,39 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     red5_closed_hand[curr_player_id][discard_tile.to_int() // 9] = 0
                     red5_discarded[discard_tile.to_int() // 9] = 1
 
-                waiting_tiles = [False] * 34
-                if 0 == shanten.Shanten().calculate_shanten(
-                    [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] for i in range(34)]):
+                waiting_tiles[curr_player_id] = [False] * 34
+                if 0 == correct_shanten([closed_hand_counts[curr_player_id][i] +
+                                         open_hand_counts[curr_player_id][i] for i in range(34)],
+                                        melds[curr_player_id]):
                     for i in range(34):
                         if closed_hand_counts[curr_player_id][i]:
-                            waiting_tiles[i] = True
+                            waiting_tiles[curr_player_id][i] = True
                             if i % 9 > 0:
-                                waiting_tiles[i - 1] = True
+                                waiting_tiles[curr_player_id][i - 1] = True
                             if i % 9 < 8 and i < 33:
-                                waiting_tiles[i + 1] = True
+                                waiting_tiles[curr_player_id][i + 1] = True
 
                     for i in range(34):
-                        waiting_tiles[i] = waiting_tiles[i] and agari.Agari().is_agari(
+                        waiting_tiles[curr_player_id][i] = waiting_tiles[curr_player_id][i] and agari.Agari().is_agari(
                             [closed_hand_counts[curr_player_id][j] + open_hand_counts[curr_player_id][j]
                              + int(bool(i)) for j in range(34)], open_melds_tile_ids[curr_player_id])
-
-                # furiten because of discard?
-                discard_furiten = any(waiting_tiles[i] and discard_orders[curr_player_id][i] for i in range(34))
-                if discard_furiten:
-                    hand_status[curr_player_id] = HandStatus.TEMP_FURITEN
 
                 # TODO: (show) update board
 
                 # update hand status trackers
+                first_move[curr_player_id] = False
                 ippatsu[curr_player_id] = False
-                match (hand_status[curr_player_id]):
-                    case HandStatus.RIICHI_DISCARD:
-                        hand_status[curr_player_id] = HandStatus.RIICHI_NO_STICK
-                        # TODO: track stick seperately (but don't remove this^)
-                        ippatsu[curr_player_id] = True
-                    case HandStatus.RIICHI_NEW:
-                        hand_status[curr_player_id] = HandStatus.RIICHI
-                    case HandStatus.TEMP_FURITEN:
-                        if not discard_furiten:
-                            hand_status[curr_player_id] = HandStatus.DEFAULT if not hand_in_riichi[curr_player_id] \
-                                else HandStatus.RIICHI
-                            # TODO: (show) update board
+                if riichi_status[curr_player_id] == RiichiStatus.RIICHI_DISCARD:
+                    riichi_status[curr_player_id] = RiichiStatus.RIICHI_NO_STICK
+                    ippatsu[curr_player_id] = True
+                if furiten_status[curr_player_id] == FuritenStatus.TEMP_FURITEN:
+                    furiten_status[curr_player_id] = FuritenStatus.DEFAULT
+                    # TODO: (show) update board
+
+                # furiten because of discard?
+                if any(waiting_tiles[curr_player_id][i] and discard_orders[curr_player_id][i] for i in range(34)):
+                    furiten_status[curr_player_id] = FuritenStatus.TEMP_FURITEN
+                    # TODO: (show) update board
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -399,10 +401,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     is_chi_possible[p] = bool(possible_chi[p]) and not hand_in_riichi[p]
                     is_pon_possible[p] = closed_hand_counts[p][tile.to_int()] >= 2 and not hand_in_riichi[p]
                     is_kan_possible[p] = closed_hand_counts[p][tile.to_int()] == 3 and not hand_in_riichi[p]
-                    if hand_status[p] != HandStatus.TEMP_FURITEN and hand_status[p] != HandStatus.PERM_FURITEN and \
-                            agari.Agari().is_agari(
-                                [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
-                                 for i in range(34)], open_melds_tile_ids[p]):
+                    if furiten_status[p] == FuritenStatus.DEFAULT and agari.Agari().is_agari(
+                            [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
+                             for i in range(34)], open_melds_tile_ids[p]):
                         tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]] + [tile.true_id()]
                         win_tile136 = tile.true_id()
                         hand_result = hand_calculator.estimate_hand_value(
@@ -440,7 +441,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
 
                         # query the model
                         discard_tiles, call_tiles_curr, action = competitors[p].model.get_prediction(inputs.to_tensor())
-                        call_tiles[p] = call_tiles_curr
+                        call_tiles[p] = call_tiles_curr.tolist()
                         action = action.clone()
 
                         action[0], action[3], action[5] = 0., 0., 0.
@@ -552,7 +553,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                             best_chi_value = 0.
                             for i, chi in enumerate(possible_chi[curr_player_id]):
                                 for tile_id_mod in chi:
-                                    chi_value = float(call_tiles[curr_player_id][tile.to_int() + tile_id_mod])
+                                    chi_value = call_tiles[curr_player_id][tile.to_int() + tile_id_mod]
                                     if best_chi_value < chi_value:
                                         best_chi = possible_chi[curr_player_id][i]
                                         best_chi_value = chi_value
@@ -593,19 +594,22 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                             red5_open_hand[curr_player_id][tile.to_int() // 9] = 1
 
                     case MoveType.PASS:
-                        if hand_status[from_who] == HandStatus.RIICHI_NO_STICK:
-                            hand_status[from_who] = HandStatus.RIICHI_NEW
-                        # TODO: (show) put down riichi stick
+                        if riichi_status[from_who] == RiichiStatus.RIICHI_NO_STICK:
+                            riichi_status[from_who] = RiichiStatus.RIICHI
+                            scores[from_who] -= 10
+                            # TODO: (show) put down riichi stick
 
                 # update hand status trackers
                 for p in range(4):
                     if is_ron_possible[p] and wants[p] != MoveType.RON:
-                        hand_status[p] = HandStatus.PERM_FURITEN if hand_in_riichi[p] else HandStatus.TEMP_FURITEN
+                        furiten_status[p] = FuritenStatus.PERM_FURITEN if hand_in_riichi[p] \
+                            else FuritenStatus.TEMP_FURITEN
 
                 if decision != MoveType.PASS:
                     open_melds_tile_ids[curr_player_id].append(new_meld_ids)
                     hand_is_closed[curr_player_id] = 0
                     discard_piles[from_who].pop()
+                    nagashi_mangan[from_who] = False
                     # TODO: (show) update board
                     if decision == MoveType.KAN:
                         event = Event(EventType.DRAW_TILE_AFTER_KAN, curr_player_id)
@@ -627,10 +631,9 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 for p in range(4):
                     if p == curr_player_id:
                         continue
-                    if hand_status[p] != HandStatus.TEMP_FURITEN and hand_status[p] != HandStatus.PERM_FURITEN and \
-                            agari.Agari().is_agari(
-                                [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
-                                 for i in range(34)], open_melds_tile_ids[p]):
+                    if furiten_status[p] == FuritenStatus.DEFAULT and agari.Agari().is_agari(
+                            [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.to_int() == i)
+                             for i in range(34)], open_melds_tile_ids[p]):
                         tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]] + [tile.true_id()]
                         win_tile136 = tile.true_id()
                         hand_result = hand_calculator.estimate_hand_value(
@@ -639,7 +642,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                                 round_wind=wind_from_int(non_repeat_round_no)
                             ))
                         is_ron_possible[p] = hand_result.error is None and \
-                            (meld.opened or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
+                                             (meld.opened or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
                         # robbing a kan works only on added kan, or closed kan + thirteen orphans
 
                 event = Event(EventType.DRAW_TILE_AFTER_KAN, curr_player_id)
@@ -671,7 +674,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                 # update hand status trackers
                 for p in range(4):
                     if is_ron_possible[p] and wants[p] != MoveType.RON:
-                        hand_status[p] = HandStatus.PERM_FURITEN if hand_in_riichi[p] else HandStatus.TEMP_FURITEN
+                        furiten_status[p] = FuritenStatus.PERM_FURITEN if hand_in_riichi[p] \
+                            else FuritenStatus.TEMP_FURITEN
 
                 if MoveType.RON in wants:
                     for p in range(4):
@@ -682,9 +686,21 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                     event = Event(EventType.WINNER, [curr_player_id, [p for p in range(4) if wants[p] == MoveType.RON]])
 
             case EventType.WALL_EXHAUSTED:
+                # check nagashi mangan yaku conditions
+                for p in range(4):
+                    nagashi_mangan[p] &= \
+                        all(not discard_orders[i] or i in mc.TERMINAL_INDICES + list(range(26, 34)) for i in range(34))
+
+                    if nagashi_mangan[p]:
+                        event = Event(EventType.WINNER, [p, [p]])
+                        break
+                if any(nagashi_mangan):
+                    continue
+
                 has_tenpai = [0] * 4  # ready hand
                 for p in range(4):
-                    has_tenpai[p] = int(shanten.Shanten().calculate_shanten(closed_hand_counts[p]) <= 0)
+                    has_tenpai[p] = int(correct_shanten([closed_hand_counts[p][i] +
+                                                         open_hand_counts[p][i] for i in range(34)], melds[p]) <= 0)
                 match sum(has_tenpai):
                     case 3:
                         for p in range(4):
@@ -715,19 +731,21 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, devic
                         is_daburu_riichi = double_riichi[p]
 
                         # pretty much impossible
-                        # TODO: track this (or don't)
-                        is_nagashi_mangan = False  # wtf...? https://riichi.wiki/Nagashi_mangan
-                        is_tenhou = False  # win on first draw (dealer)
-                        is_renhou = False  # ron on starting hand (no draws) as a first call of the round
-                        is_chiihou = False  # win on first draw, before any call (not dealer)
-                        is_open_riichi = False  # what?
-                        is_paarenchan = False  # if you keep dealership for 8 consecutive rounds
+                        is_nagashi_mangan = nagashi_mangan[p]  # 🗿 https://riichi.wiki/Nagashi_mangan
+                        is_tenhou = is_tsumo and turn_no == 1  # win on first draw (dealer)
+                        # ron on starting hand (no draws) as a first call of the round
+                        is_renhou = not is_tsumo and first_move[p] and all(not m for m in melds)
+                        # win on first draw, before any call (not dealer)
+                        is_chiihou = is_tsumo and turn_no > 1 and first_move[p]
+                        is_open_riichi = False  # this rule variation doesn't use open riichi yaku
+                        is_paarenchan = False  # this rule variation doesn't use parenchan yaku
 
                         # other info
                         player_wind = wind_from_int(seat_wind[p])
                         round_wind = wind_from_int(non_repeat_round_no)
-                        kyoutaku_number = 0  # ???
-                        tsumi_number = 0  # ???
+                        # riichi sticks (no of bets placed)
+                        kyoutaku_number = sum(rs == RiichiStatus.RIICHI for rs in riichi_status)
+                        tsumi_number = 0  # penalty sticks
                         options = OptionalRules(has_aka_dora=True)
 
                         config = HandConfig(is_tsumo, is_riichi, is_ippatsu, is_rinshan, is_chankan, is_haitei,
@@ -789,13 +807,13 @@ def simulate_match(competitors, seed, device):
     non_repeat_round_no = 0
     round_no = 0
     while not (min(scores) <= 0 or (non_repeat_round_no >= 3 and max(scores) >= 500) or round_no >= 12):
-        scores, dealer_won = simulate_round(competitors, scores, non_repeat_round_no, device)
+        scores, dealer_won = simulate_round(competitors, scores, non_repeat_round_no, 0, device)
         round_no += 1
         if not dealer_won:
             non_repeat_round_no += 1
 
     # limit round number - if models are too "weak" or too similar, the simulation will never end
-    if round_no <= 12:
+    if min(scores) <= 0 or (non_repeat_round_no >= 3 and max(scores) >= 500):
         print("Match won by someone")
     else:
         print("Draw: too many rounds")

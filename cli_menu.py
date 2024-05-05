@@ -16,7 +16,7 @@ init [num_layers] [hidden_size]
 train [how_many] [starting_from] [batch_size] [filename] [db_file]
 save [filename]
 load [filename] (will call init with proper arguments)
-versus [how_many_matches]  - compare models against each other
+versus [how_many_matches] [init_seed]  - compare models against each other
 quit
         """)
 
@@ -60,10 +60,11 @@ quit
                 model = load_model(filename, device=device)
 
             case "versus":
-                if len(user_input) != 2:
-                    print("Expecting 1 argument for load, got {}.".format(len(user_input) - 1))
+                if len(user_input) != 3:
+                    print("Expecting 2 argument for load, got {}.".format(len(user_input) - 1))
                     continue
                 how_many = int(user_input[1])
+                init_seed = user_input[2]
 
                 competitors = []
                 names = []
@@ -78,7 +79,7 @@ quit
                     names.append(filename)
                     i += 1
 
-                win_rates = versus(competitors, how_many, torch.device("cpu"))
+                win_rates = versus(competitors, how_many, init_seed, torch.device("cpu"))
                 print("Win rates:")
                 for i in range(4):
                     print("{}: {}".format(names[i], win_rates[i]))
