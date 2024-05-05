@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import pygame, settings, ui, menu, discard_pile, hand, status_bar, tile_sprite
 from mahjong_enums import MoveType
-
+from resource_manager import get_sound
 
 if TYPE_CHECKING:
     from gui import Gui
@@ -12,11 +12,13 @@ class Board:
     def __init__(self, gui: Gui):
         self.gui = gui
         self.display_surface = self.gui.display_surface
+        self.buffer_surface = pygame.Surface(self.display_surface.get_size())
         self.width, self.height = self.gui.display_surface.get_size()
         self.game_state = "WAITING"
         self.possible_moves = []
         self.chosen_move = None
         self.input_ready = False
+        self.curr_player_id = 0
 
         center_offset = 0.1 * self.height / 2
         pile_spacing = 0.01 * self.height
@@ -34,7 +36,7 @@ class Board:
             align="center",
         )
 
-        self.discard_pile_south = discard_pile.DiscardPile(
+        self.discard_pile_0 = discard_pile.DiscardPile(
             position=(
                 0.5 * self.width - center_offset + pile_spacing,
                 0.5 * self.height + center_offset + pile_spacing,
@@ -42,7 +44,7 @@ class Board:
             size=(0.6 * self.width, 0.15 * self.height),
             rotation=0,
         )
-        self.discard_pile_east = discard_pile.DiscardPile(
+        self.discard_pile_1 = discard_pile.DiscardPile(
             position=(
                 0.5 * self.width + center_offset + pile_spacing,
                 0.5 * self.height + center_offset - pile_spacing,
@@ -50,7 +52,7 @@ class Board:
             size=(0.6 * self.width, 0.15 * self.height),
             rotation=1,
         )
-        self.discard_pile_north = discard_pile.DiscardPile(
+        self.discard_pile_2 = discard_pile.DiscardPile(
             position=(
                 0.5 * self.width + center_offset - pile_spacing,
                 0.5 * self.height - center_offset - pile_spacing,
@@ -58,7 +60,7 @@ class Board:
             size=(0.6 * self.width, 0.15 * self.height),
             rotation=2,
         )
-        self.discard_pile_west = discard_pile.DiscardPile(
+        self.discard_pile_3 = discard_pile.DiscardPile(
             position=(
                 0.5 * self.width - center_offset - pile_spacing,
                 0.5 * self.height - center_offset + pile_spacing,
@@ -70,7 +72,7 @@ class Board:
         self.waiting_prompt = ui.Label(
             position=(0.5 * self.width - 0.5 * 0.9 * self.height, 0.80 * self.height),
             size=(0.6 * self.width, 0.05 * self.height),
-            text="Opponent's turn...",
+            text="...",
             align="left",
         )
 
@@ -98,42 +100,61 @@ class Board:
         )
         self.decision_buttons = []
 
+        self.bot_1_label = ui.Label(
+            position=(self.width - 0.2 * self.height, 0.95 * self.height),
+            size=(0.5 * self.width, 0.05 * self.height),
+            rotation=1,
+            text="Bot 1",
+        )
+        self.bot_2_label = ui.Label(
+            position=(0.5 * self.width + 0.5 * 0.9 * self.height, 0.2 * self.height),
+            size=(0.5 * self.width, 0.05 * self.height),
+            rotation=2,
+            text="Bot 2",
+        )
+        self.bot_3_label = ui.Label(
+            position=(0.2 * self.height, 0.05 * self.height),
+            size=(0.5 * self.width, 0.05 * self.height),
+            rotation=3,
+            text="Bot 3",
+        )
+
         self.player_hand = hand.PlayerHand(
             position=(0.5 * self.width - 0.5 * 0.9 * self.height, 0.85 * self.height),
             size=(0.9 * self.height, 0.1 * self.height),
         )
-        self.hand_east = hand.Hand(
+        self.bot_hand_1 = hand.Hand(
             position=(self.width - 0.15 * self.height, 0.95 * self.height),
             size=(0.9 * self.height, 0.1 * self.height),
             rotation=1,
         )
-        self.hand_north = hand.Hand(
+        self.bot_hand_2 = hand.Hand(
             position=(0.5 * self.width + 0.5 * 0.9 * self.height, 0.15 * self.height),
             size=(0.9 * self.height, 0.1 * self.height),
             rotation=2,
         )
-        self.hand_west = hand.Hand(
+        self.bot_hand_3 = hand.Hand(
             position=(0.15 * self.height, 0.05 * self.height),
             size=(0.9 * self.height, 0.1 * self.height),
             rotation=3,
         )
 
-        self.status_bar_south = status_bar.StatusBar(
+        self.status_bar_0 = status_bar.StatusBar(
             position=(0.5 * self.width - 0.5 * 0.9 * self.height, 0.95 * self.height),
             size=(0.9 * self.height, 0.05 * self.height),
             rotation=0,
         )
-        self.status_bar_east = status_bar.StatusBar(
+        self.status_bar_1 = status_bar.StatusBar(
             position=(self.width - 0.05 * self.height, 0.95 * self.height),
             size=(0.9 * self.height, 0.05 * self.height),
             rotation=1,
         )
-        self.status_bar_north = status_bar.StatusBar(
+        self.status_bar_2 = status_bar.StatusBar(
             position=(0.5 * self.width + 0.5 * 0.9 * self.height, 0.05 * self.height),
             size=(0.9 * self.height, 0.05 * self.height),
             rotation=2,
         )
-        self.status_bar_west = status_bar.StatusBar(
+        self.status_bar_3 = status_bar.StatusBar(
             position=(0.05 * self.height, 0.05 * self.height),
             size=(0.9 * self.height, 0.05 * self.height),
             rotation=3,
@@ -172,28 +193,34 @@ class Board:
             + ("F" if show_furiten[i] else "")
             for i in range(4)
         ]
-        self.status_bar_south.update_status(
+        self.status_bar_0.update_status(
             winds.split()[seat_wind[0]], str(scores[0]), specials[0]
         )
-        self.status_bar_east.update_status(
+        self.status_bar_1.update_status(
             winds.split()[seat_wind[1]], str(scores[1]), specials[1]
         )
-        self.status_bar_north.update_status(
+        self.status_bar_2.update_status(
             winds.split()[seat_wind[2]], str(scores[2]), specials[2]
         )
-        self.status_bar_west.update_status(
+        self.status_bar_3.update_status(
             winds.split()[seat_wind[3]], str(scores[3]), specials[3]
         )
 
         self.player_hand.update_tiles(closed_hands[0], open_hands[0])
-        self.hand_east.update_tiles(closed_hands[1], open_hands[1])
-        self.hand_north.update_tiles(closed_hands[2], open_hands[2])
-        self.hand_west.update_tiles(closed_hands[3], open_hands[3])
+        self.bot_hand_1.update_tiles(closed_hands[1], open_hands[1])
+        self.bot_hand_2.update_tiles(closed_hands[2], open_hands[2])
+        self.bot_hand_3.update_tiles(closed_hands[3], open_hands[3])
 
-        self.discard_pile_south.update_tiles(discard_piles[0])
-        self.discard_pile_east.update_tiles(discard_piles[1])
-        self.discard_pile_north.update_tiles(discard_piles[2])
-        self.discard_pile_west.update_tiles(discard_piles[3])
+        self.discard_pile_0.update_tiles(discard_piles[0])
+        self.discard_pile_1.update_tiles(discard_piles[1])
+        self.discard_pile_2.update_tiles(discard_piles[2])
+        self.discard_pile_3.update_tiles(discard_piles[3])
+
+    def update_curr_player_id(self, curr_player_id):
+        self.curr_player_id = curr_player_id
+
+    def play_sound(self, sound_name):
+        get_sound(sound_name).play()
 
     def switch_game_state(self, game_state, **kwargs):
         self.game_state = game_state
@@ -260,61 +287,113 @@ class Board:
                     button.handle_click(event.pos)
 
     def draw(self) -> None:
-        self.display_surface.fill("#79BD8F")
+        self.buffer_surface.fill("#79BD8F")
+
+        if self.curr_player_id == 0:
+            pygame.draw.rect(
+                self.buffer_surface,
+                "#68AC7E",
+                (
+                    0.25 * self.height,
+                    0.75 * self.height,
+                    self.width - 0.5 * self.height,
+                    0.25 * self.height,
+                ),
+            )
+        if self.curr_player_id == 1:
+            pygame.draw.rect(
+                self.buffer_surface,
+                "#68AC7E",
+                (
+                    self.width - 0.25 * self.height,
+                    0,
+                    0.25 * self.height,
+                    self.height,
+                ),
+            )
+        if self.curr_player_id == 2:
+            pygame.draw.rect(
+                self.buffer_surface,
+                "#68AC7E",
+                (
+                    0.25 * self.height,
+                    0,
+                    self.width - 0.5 * self.height,
+                    0.25 * self.height,
+                ),
+            )
+        if self.curr_player_id == 3:
+            pygame.draw.rect(
+                self.buffer_surface,
+                "#68AC7E",
+                (
+                    0,
+                    0,
+                    0.25 * self.height,
+                    self.height,
+                ),
+            )
+
         pygame.draw.line(
-            self.display_surface,
+            self.buffer_surface,
             settings.PRIMARY_COLOR,
             (0.25 * self.height, 0.75 * self.height),
             (self.width - 0.25 * self.height, 0.75 * self.height),
             width=5,
         )
         pygame.draw.line(
-            self.display_surface,
+            self.buffer_surface,
             settings.PRIMARY_COLOR,
             (self.width - 0.25 * self.height, 0),
             (self.width - 0.25 * self.height, self.height),
             width=5,
         )
         pygame.draw.line(
-            self.display_surface,
+            self.buffer_surface,
             settings.PRIMARY_COLOR,
             (0.25 * self.height, 0.25 * self.height),
             (self.width - 0.25 * self.height, 0.25 * self.height),
             width=5,
         )
         pygame.draw.line(
-            self.display_surface,
+            self.buffer_surface,
             settings.PRIMARY_COLOR,
             (0.25 * self.height, 0),
             (0.25 * self.height, self.height),
             width=5,
         )
 
-        self.prevalent_wind_label.draw(self.display_surface)
+        self.prevalent_wind_label.draw(self.buffer_surface)
 
-        self.discard_pile_south.draw(self.display_surface)
-        self.discard_pile_east.draw(self.display_surface)
-        self.discard_pile_north.draw(self.display_surface)
-        self.discard_pile_west.draw(self.display_surface)
+        self.discard_pile_0.draw(self.buffer_surface)
+        self.discard_pile_1.draw(self.buffer_surface)
+        self.discard_pile_2.draw(self.buffer_surface)
+        self.discard_pile_3.draw(self.buffer_surface)
 
-        self.player_hand.draw(self.display_surface)
-        self.hand_east.draw(self.display_surface)
-        self.hand_north.draw(self.display_surface)
-        self.hand_west.draw(self.display_surface)
+        self.player_hand.draw(self.buffer_surface)
+        self.bot_hand_1.draw(self.buffer_surface)
+        self.bot_hand_2.draw(self.buffer_surface)
+        self.bot_hand_3.draw(self.buffer_surface)
 
-        self.status_bar_south.draw(self.display_surface)
-        self.status_bar_east.draw(self.display_surface)
-        self.status_bar_north.draw(self.display_surface)
-        self.status_bar_west.draw(self.display_surface)
+        self.bot_1_label.draw(self.buffer_surface)
+        self.bot_2_label.draw(self.buffer_surface)
+        self.bot_3_label.draw(self.buffer_surface)
+
+        self.status_bar_0.draw(self.buffer_surface)
+        self.status_bar_1.draw(self.buffer_surface)
+        self.status_bar_2.draw(self.buffer_surface)
+        self.status_bar_3.draw(self.buffer_surface)
 
         if self.game_state == "WAITING":
-            self.waiting_prompt.draw(self.display_surface)
+            self.waiting_prompt.draw(self.buffer_surface)
         elif self.game_state == "DISCARDING":
-            self.discarding_prompt.draw(self.display_surface)
-            self.discarding_button.draw(self.display_surface)
+            self.discarding_prompt.draw(self.buffer_surface)
+            self.discarding_button.draw(self.buffer_surface)
         elif self.game_state == "DECIDING":
-            self.decision_promt.draw(self.display_surface)
+            self.decision_promt.draw(self.buffer_surface)
             for button in self.decision_buttons:
-                button.draw(self.display_surface)
+                button.draw(self.buffer_surface)
 
-        self.exit_pop_up.draw(self.display_surface)
+        self.exit_pop_up.draw(self.buffer_surface)
+
+        self.display_surface.blit(self.buffer_surface, (0, 0))

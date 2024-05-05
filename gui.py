@@ -10,7 +10,7 @@ from player import Player
 class Gui:
     def __init__(self) -> None:
         pygame.init()
-        self.display_surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.DOUBLEBUF, 16)
+        self.display_surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         # self.display_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Riichi Mahjong")
         self.running = False
