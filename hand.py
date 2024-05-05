@@ -11,7 +11,7 @@ class Hand:
         self.hidden = hidden
 
     def update_tiles(self, closed_tiles, open_tiles):
-        closed_tiles.sort(key=lambda tile: tile.true_id())
+        closed_tiles_sorted = sorted(closed_tiles, key=lambda tile: tile.true_id())
 
         spacing = 3
         tile_width = (self.size[0] - 18 * spacing) / 19
@@ -53,10 +53,10 @@ class Hand:
             elif self.rotation == 3:
                 return (base_x + i * delta_x, base_y + i * delta_y)
 
-        if closed_tiles != self.closed_tiles:
+        if closed_tiles_sorted != self.closed_tiles:
             self.closed_tiles.empty()
             i = 0
-            for tile in closed_tiles:
+            for tile in closed_tiles_sorted:
                 self.closed_tiles.add(
                     tile_sprite.TileSprite(get_tile_position(i), tile_size, tile, self.rotation, hidden=self.hidden)
                 )
