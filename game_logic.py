@@ -403,33 +403,26 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 # update hand status trackers
                 first_move[curr_player_id] = False
                 ippatsu[curr_player_id] = False
+                furiten_changed = False
                 if riichi_status[curr_player_id] == RiichiStatus.RIICHI_DISCARD:
                     riichi_status[curr_player_id] = RiichiStatus.RIICHI_NO_STICK
                     ippatsu[curr_player_id] = True
                 if furiten_status[curr_player_id] == FuritenStatus.TEMP_FURITEN:
                     furiten_status[curr_player_id] = FuritenStatus.DEFAULT
-                    # TODO: (show) update board
-                    if board:
-                        board.update_state(
-                            prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                            open_hands, discard_piles, dora_indicators, scores,
-                            [rs == RiichiStatus.RIICHI for rs in riichi_status],
-                            [fs != FuritenStatus.DEFAULT for fs in furiten_status],
-                        )
-                        sleep(1)
+                    furiten_changed = True
 
                 # furiten because of discard?
                 if any(waiting_tiles[curr_player_id][i] and discard_orders[curr_player_id][i] for i in range(34)):
                     furiten_status[curr_player_id] = FuritenStatus.TEMP_FURITEN
-                    # TODO: (show) update board
-                    if board:
-                        board.update_state(
-                            prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                            open_hands, discard_piles, dora_indicators, scores,
-                            [rs == RiichiStatus.RIICHI for rs in riichi_status],
-                            [fs != FuritenStatus.DEFAULT for fs in furiten_status],
-                        )
-                        sleep(1)
+                    furiten_changed = True
+
+                if board and furiten_changed:
+                    board.update_state(
+                        prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
+                        open_hands, discard_piles, dora_indicators, scores,
+                        [rs == RiichiStatus.RIICHI for rs in riichi_status],
+                        [fs != FuritenStatus.DEFAULT for fs in furiten_status],
+                    )
 
                 event = Event(EventType.TILE_DISCARDED, curr_player_id)
 
@@ -456,7 +449,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     if tile.is_red5():
                         red5_hidden[p][tile.to_int() // 9] = 0
 
-                    if tile.to_int() < 27:  # normal tiles, not wind or dragon
+                    if p == ((from_who + 1) % 4) and tile.to_int() < 27:  # normal tiles, not wind or dragon
                         order_in_set = tile.to_int() % 9
                         if 0 < order_in_set < 8 and \
                                 closed_hand_counts[p][tile.to_int() - 1] and closed_hand_counts[p][tile.to_int() + 1]:
