@@ -494,7 +494,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         if is_ron_possible[p]:
                             choices.append(MoveType.RON)
                         # TODO: (query player) ask player what they want
-                        if len(choices) > 1:
+                        if board and len(choices) > 1:
                             board.switch_game_state("DECIDING", possible_moves=choices, target_tile=tile)
                             while not board.input_ready:
                                 pass
@@ -622,8 +622,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         # query what chi exactly
                         if competitors[curr_player_id].is_human and len(possible_chi[curr_player_id]) > 1:
                             # TODO: (query player) ask player what chi do they want
+                            if board:
+                                board.switch_game_state("DECIDING_CHI", possible_moves=possible_chi[curr_player_id], target_tile=tile)
+                                while not board.input_ready:
+                                    pass
+                                best_chi = possible_chi[curr_player_id][board.chosen_move]
+                                board.switch_game_state("WAITING")
                             # best_chi = possible_chi[curr_player_id][0]
-                            best_chi = (-1, 1)
+                            # best_chi = (-1, 1)
                         elif (not competitors[curr_player_id].is_human) and len(possible_chi[curr_player_id]) > 1:
                             best_chi = []
                             best_chi_value = 0.
