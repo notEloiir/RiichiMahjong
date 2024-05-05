@@ -68,6 +68,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
     after_a_kan = False
     stolen_kan = False
     waiting_tiles = [[False] * 34 for _ in range(4)]
+    can_riichi_discard = [[False] * 34 for _ in range(4)]
     nagashi_mangan = [False] * 4
 
     # PREP ROUND
@@ -247,8 +248,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         what_do = board.chosen_move
                         board.switch_game_state("WAITING")
 
-                    
-
                     # temporary
                     # what_do = MoveType.DISCARD
 
@@ -309,6 +308,13 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         riichi_status[curr_player_id] = RiichiStatus.RIICHI_DISCARD
                         double_riichi[curr_player_id] = first_move[curr_player_id]
 
+                        for tile in closed_hands[curr_player_id]:
+                            # is shanten still 0 if you discard the tile
+                            can_riichi_discard[curr_player_id][tile.to_int()] = 0 == \
+                                correct_shanten([closed_hand_counts[curr_player_id][i] +
+                                                 open_hand_counts[curr_player_id][i] - int(i == tile.to_int())
+                                                 for i in range(34)], melds[curr_player_id])
+
                     case MoveType.TSUMO:
                         after_a_kan = event.what == EventType.DRAW_TILE_AFTER_KAN
                         closed_hands[curr_player_id].append(tile)
@@ -323,6 +329,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     discard_tile = closed_hands[curr_player_id][-1]
                 elif competitors[curr_player_id].is_human:
                     # TODO: (query player) ask player what to discard
+                    # TODO: if riichi discard, limit available tiles to those of id34 in car_riichi_discard[current_p..]
                     board.switch_game_state("DISCARDING")
                     while not board.input_ready:
                         pass
@@ -345,6 +352,10 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     for tile_id in range(34):
                         if not closed_hand_counts[curr_player_id][tile_id]:
                             discard_tiles[tile_id] = 0.
+                    if riichi_status[curr_player_id] == RiichiStatus.RIICHI_DISCARD:
+                        for tile_id in range(34):
+                            if not can_riichi_discard[curr_player_id][tile_id]:
+                                discard_tiles[tile_id] = 0.
 
                     # turn the results to probabilities
                     discard_tiles /= torch.sum(discard_tiles)
@@ -362,7 +373,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     else:
                         # model is confused and has no idea what to do
                         discard_tile = random.choice(closed_hands[curr_player_id])
-                    
+
                 closed_hand_counts[curr_player_id][discard_tile.to_int()] -= 1
                 closed_hands[curr_player_id].remove(discard_tile)
                 discard_piles[curr_player_id].append(discard_tile)
@@ -480,7 +491,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 call_tiles = [[] for _ in range(4)]
                 for p in range(4):
                     if p == from_who or \
-                            not(is_chi_possible[p] or is_pon_possible[p] or is_kan_possible[p] or is_ron_possible[p]):
+                            not (is_chi_possible[p] or is_pon_possible[p] or is_kan_possible[p] or is_ron_possible[p]):
                         continue
 
                     if competitors[p].is_human:
