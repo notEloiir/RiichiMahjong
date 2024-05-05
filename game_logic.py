@@ -196,16 +196,16 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     if is_closed_kan_possible or is_added_kan_possible:
                         tile_to_call = tile.to_int()
                         tile_origin = curr_player_id
-                    inputs = InputFeatures(device, curr_player_id, non_repeat_round_no, turn_no, dealer_id,
-                                           prevalent_wind, seat_wind[curr_player_id],
-                                           closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
-                                           hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed,
-                                           hand_in_riichi, scores, red5_closed_hand[curr_player_id], red5_open_hand,
-                                           red5_discarded, red5_hidden[curr_player_id], tile_to_call, tile_origin)
+                    inputs = InputFeatures.from_args(
+                        device, curr_player_id, non_repeat_round_no, turn_no, dealer_id, prevalent_wind,
+                        seat_wind[curr_player_id], closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
+                        hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed, hand_in_riichi, scores,
+                        red5_closed_hand[curr_player_id], red5_open_hand, red5_discarded, red5_hidden[curr_player_id],
+                        tile_to_call, tile_origin)
 
                     # query the model
                     discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
-                        inputs.to_tensor())
+                        inputs.tensor)
                     action = action.clone()
 
                     # zero out everything that isn't possible
@@ -330,16 +330,15 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     board.switch_game_state("WAITING")
                 else:
                     # query the model what to discard
-                    inputs = InputFeatures(device, curr_player_id, non_repeat_round_no, turn_no, dealer_id,
-                                           prevalent_wind, seat_wind[curr_player_id],
-                                           closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
-                                           hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed,
-                                           hand_in_riichi, scores, red5_closed_hand[curr_player_id], red5_open_hand,
-                                           red5_discarded, red5_hidden[curr_player_id])
+                    inputs = InputFeatures.from_args(
+                        device, curr_player_id, non_repeat_round_no, turn_no, dealer_id, prevalent_wind,
+                        seat_wind[curr_player_id], closed_hand_counts[curr_player_id], open_hand_counts, discard_orders,
+                        hidden_tile_counts[curr_player_id], visible_dora, hand_is_closed, hand_in_riichi, scores,
+                        red5_closed_hand[curr_player_id], red5_open_hand, red5_discarded, red5_hidden[curr_player_id])
 
                     # query the model
                     discard_tiles, call_tiles, action = competitors[curr_player_id].model.get_prediction(
-                        inputs.to_tensor())
+                        inputs.tensor)
                     discard_tiles = discard_tiles.clone()
 
                     # zero out everything that isn't possible
@@ -487,7 +486,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 wants = [MoveType.PASS for _ in range(4)]
                 call_tiles = [[] for _ in range(4)]
                 for p in range(4):
-                    if p == from_who:
+                    if p == from_who or \
+                            not(is_chi_possible[p] or is_pon_possible[p] or is_kan_possible[p] or is_ron_possible[p]):
                         continue
 
                     if competitors[p].is_human:
@@ -509,14 +509,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             board.switch_game_state("WAITING")
                     else:
                         # prepare the rest of input tensor
-                        inputs = InputFeatures(device, p, non_repeat_round_no, turn_no, dealer_id, prevalent_wind,
-                                               seat_wind[p], closed_hand_counts[p], open_hand_counts, discard_orders,
-                                               hidden_tile_counts[p], visible_dora, hand_is_closed, hand_in_riichi,
-                                               scores, red5_closed_hand[p], red5_open_hand, red5_discarded,
-                                               red5_hidden[p])
+                        inputs = InputFeatures.from_args(
+                            device, p, non_repeat_round_no, turn_no, dealer_id, prevalent_wind, seat_wind[p],
+                            closed_hand_counts[p], open_hand_counts, discard_orders, hidden_tile_counts[p],
+                            visible_dora, hand_is_closed, hand_in_riichi, scores, red5_closed_hand[p], red5_open_hand,
+                            red5_discarded, red5_hidden[p])
 
                         # query the model
-                        discard_tiles, call_tiles_curr, action = competitors[p].model.get_prediction(inputs.to_tensor())
+                        discard_tiles, call_tiles_curr, action = competitors[p].model.get_prediction(inputs.tensor)
                         call_tiles[p] = call_tiles_curr.tolist()
                         action = action.clone()
 
@@ -751,14 +751,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         wants[p] = MoveType.PASS
                     elif not competitors[p].is_human and is_ron_possible[p]:
                         # prepare the rest of input tensor
-                        inputs = InputFeatures(device, p, non_repeat_round_no, turn_no, dealer_id, prevalent_wind,
-                                               seat_wind[p], closed_hand_counts[p], open_hand_counts, discard_orders,
-                                               hidden_tile_counts[p], visible_dora, hand_is_closed, hand_in_riichi,
-                                               scores, red5_closed_hand[p], red5_open_hand, red5_discarded,
-                                               red5_hidden[p])
+                        inputs = InputFeatures.from_args(
+                            device, p, non_repeat_round_no, turn_no, dealer_id, prevalent_wind, seat_wind[p],
+                            closed_hand_counts[p], open_hand_counts, discard_orders, hidden_tile_counts[p],
+                            visible_dora, hand_is_closed, hand_in_riichi, scores, red5_closed_hand[p], red5_open_hand,
+                            red5_discarded, red5_hidden[p])
 
                         # query the model
-                        discard_tiles, call_tiles, action = competitors[p].model.get_prediction(inputs.to_tensor())
+                        discard_tiles, call_tiles, action = competitors[p].model.get_prediction(inputs.tensor)
 
                         # decide what to do
                         wants[p] = MoveType.RON if action[4] > action[7] else MoveType.PASS
@@ -852,14 +852,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
                                                                           melds=melds[p], config=config,
                                                                           dora_indicators=dora_indicators136)
-
-                        if hand_result.error:
-                            print(agari.Agari().is_agari(
-                                [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] for i in
-                                 range(34)],
-                                open_melds_tile_ids[curr_player_id]
-                            ))
-                            raise Exception(hand_result.error)
 
                         # show result
                         # TODO: (show) show hand result in GUI instead
