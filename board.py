@@ -262,6 +262,41 @@ class Board:
                     button_position[0] + button_size[0] + spacing,
                     button_position[1],
                 )
+        elif self.game_state == "DECIDING_CHI":
+            self.decision_promt.text = "Which chi to meld?"
+            target_tile = kwargs.get("target_tile")
+            if target_tile:
+                self.decision_promt.text += f" ({tile_sprite.TileSprite.get_tile_name(target_tile.true_id())})"
+            self.possible_moves = kwargs.get("possible_moves")
+            self.chosen_move = None
+            self.player_hand.selected_tile = None
+
+            self.decision_buttons = []
+            spacing = 3
+            button_size = (
+                (0.2 * self.width - (len(self.possible_moves) - 1) * spacing)
+                / len(self.possible_moves),
+                0.05 * self.height,
+            )
+            button_position = (
+                0.5 * self.width + 0.5 * 0.9 * self.height - 0.2 * self.width,
+                0.80 * self.height,
+            )
+            for i, move in enumerate(self.possible_moves):
+                tile_number = (target_tile.to_int()) % 9 + 1
+                button_text = " - ".join(sorted([str(tile_number), str(tile_number + move[0]), str(tile_number + move[1])]))
+                self.decision_buttons.append(
+                    ui.Button(
+                        position=button_position,
+                        size=button_size,
+                        text=button_text,
+                        on_click=lambda chosen_chi_id=i: self.make_decision(chosen_chi_id),
+                    )
+                )
+                button_position = (
+                    button_position[0] + button_size[0] + spacing,
+                    button_position[1],
+                )
 
     def make_decision(self, move):
         self.chosen_move = move
@@ -282,7 +317,7 @@ class Board:
             if self.game_state == "DISCARDING":
                 self.player_hand.handle_click(event.pos)
                 self.discarding_button.handle_click(event.pos)
-            if self.game_state == "DECIDING":
+            if self.game_state == "DECIDING" or self.game_state == "DECIDING_CHI":
                 for button in self.decision_buttons:
                     button.handle_click(event.pos)
 
@@ -389,7 +424,7 @@ class Board:
         elif self.game_state == "DISCARDING":
             self.discarding_prompt.draw(self.buffer_surface)
             self.discarding_button.draw(self.buffer_surface)
-        elif self.game_state == "DECIDING":
+        elif self.game_state == "DECIDING" or self.game_state == "DECIDING_CHI":
             self.decision_promt.draw(self.buffer_surface)
             for button in self.decision_buttons:
                 button.draw(self.buffer_surface)
