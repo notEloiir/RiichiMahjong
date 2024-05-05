@@ -5,8 +5,9 @@ class UIItem:
     def __init__(self, position=(0, 0), size=(0, 0)) -> None:
         self.size = size
         self.position = position
-
-    def draw(self, dt, display_surface):
+        self.rect = pygame.rect.Rect(*self.position, *self.size)
+        
+    def draw(self, display_surface):
         raise NotImplementedError("Method draw is not implemented!")
 
 
@@ -17,22 +18,33 @@ class Label(UIItem):
         size=(0, 0),
         text="",
         text_color=settings.PRIMARY_COLOR,
+        align="center",
     ) -> None:
         super().__init__(position, size)
         self.text = text
         self.text_color = text_color
+        self.align = align
 
-    def draw(self, dt, display_surface):
+    def draw(self, display_surface):
         if self.text:
             font = pygame.font.Font(settings.FONT_NAME, int(self.size[1]) // 2)
             text = font.render(self.text, True, self.text_color)
-            display_surface.blit(
-                text,
-                (
+            if self.align == "left":
+                text_position = (
+                    self.position[0],
+                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                )
+            elif self.align == "right":
+                text_position = (
+                    self.position[0] + self.size[0] - text.get_width(),
+                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                )
+            else:
+                text_position = (
                     self.position[0] + (self.size[0] / 2 - text.get_width() / 2),
                     self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
-                ),
-            )
+                )
+            display_surface.blit(text, text_position)
 
 
 class Button(UIItem):
@@ -46,29 +58,23 @@ class Button(UIItem):
         bg_color=settings.SECONDARY_COLOR,
     ):
         super().__init__(position, size)
+
         self.on_click = on_click
-        self.content = UIVerticalBox(
-            position=self.position,
-            size=self.size,
-        )
-        self.text = text
+
         self.text_color = text_color
         self.bg_color = bg_color
-        if self.text:
-            self.content.items.append(
-                Label(
-                    text=text,
-                    text_color=text_color,
-                )
-            )
 
-    def draw(self, dt, display_surface):
+        self.label = Label(
+            self.position,
+            self.size,
+            text,
+        )
+
+    def draw(self, display_surface):
         rect = pygame.rect.Rect(*self.position, *self.size)
         pygame.draw.rect(display_surface, self.bg_color, rect, 0, 10)
 
-        self.content.position = self.position
-        self.content.size = self.size
-        self.content.draw(dt, display_surface)
+        self.label.draw(display_surface)
 
     def handle_click(self, mouse_pos):
         rect = pygame.rect.Rect(*self.position, *self.size)
@@ -76,135 +82,72 @@ class Button(UIItem):
             self.on_click()
 
 
-class TextPopUp(UIItem):
+class YesOrNoPopUp(UIItem):
     def __init__(
         self,
         position=(0, 0),
         size=(0, 0),
-        buttons=None,
-        text="",
+        on_yes=None,
+        on_no=None,
+        yes_text="",
+        no_text="",
+        pop_up_text="",
         text_color=settings.PRIMARY_COLOR,
         bg_color=settings.SECONDARY_COLOR,
-    ) -> None:
+    ):
         super().__init__(position, size)
+
         self.active = False
-        self.content = UIVerticalBox(
-            position=self.position,
-            size=self.size,
-            padding=(0.1, 0.1),
-            spacing=0.1,
-        )
-        self.text = text
+
         self.text_color = text_color
         self.bg_color = bg_color
-        if self.text:
-            self.content.items.append(
-                Label(
-                    text=self.text,
-                    text_color=self.text_color,
-                )
-            )
-        self.buttons = buttons if buttons else []
-        if self.buttons:
-            self.content.items.append(
-                UIHorizontalBox(
-                    (0, 0),
-                    (0, 0), 
-                    items=self.buttons,
-                    padding=(0, 0.1),
-                    spacing=0.1,
-                )
-            )
-        
 
-    def draw(self, dt, display_surface):
+        self.label = Label(
+            position=self.position,
+            size=(self.size[0], self.size[1] // 2),
+            text=pop_up_text,
+            text_color=self.text_color,
+        )
+
+        self.yes_button = Button(
+            (self.position[0] + int(0.1 * self.size[0]), self.position[1] + int(0.6 * self.size[1])),
+            (int(0.35 * self.size[0]), int(0.3 * self.size[1])),
+            on_click=on_yes,
+            text=yes_text,
+            bg_color="#8CBEB2",
+            text_color=self.text_color,
+        )
+        self.no_button = Button(
+            (self.position[0] + int(0.55 * self.size[0]), self.position[1] + int(0.6 * self.size[1])),
+            (int(0.35 * self.size[0]), int(0.3 * self.size[1])),
+            on_click=on_no,
+            text=no_text,
+            bg_color="#F3B562",
+            text_color=self.text_color,
+        )
+
+
+
+    def draw(self, display_surface):
         if not self.active:
             return
 
-        rect = pygame.rect.Rect(*self.position, *self.size)
-        pygame.draw.rect(display_surface, self.bg_color, rect, 0, 10)
+        pygame.draw.rect(display_surface, self.bg_color, self.rect, 0, 10)
 
-        self.content.position = self.position
-        self.content.size = self.size
-        self.content.draw(dt, display_surface)
+        self.label.draw(display_surface)
+        self.yes_button.draw(display_surface)
+        self.no_button.draw(display_surface)
 
     def toggle(self):
         self.active = not self.active
 
     def handle_click(self, mouse_pos):
-        rect = pygame.rect.Rect(*self.position, *self.size)
-        if not rect.collidepoint(*mouse_pos):
+        if not self.active:
+            return
+        
+        if not self.rect.collidepoint(*mouse_pos):
             self.active = False
             return
 
-        for button in self.buttons:
-            button.handle_click(mouse_pos)
-
-
-class UIVerticalBox(UIItem):
-    def __init__(
-        self,
-        position: tuple[int, int]=(0, 0),
-        size: tuple[int, int]=(0, 0),
-        items: list[UIItem]=None,
-        padding: tuple[float, float]=(0, 0),
-        spacing: float=0,
-    ):
-        self.position = position
-        self.size = size
-        self.items = items if items else []
-        self.padding = padding
-        self.spacing = spacing
-    
-    def draw(self, dt, display_surface):
-        padding = (self.padding[0] * self.size[0], self.padding[1] * self.size[1])
-        spacing = self.size[1] * self.spacing
-        item_size = (
-            self.size[0] - 2 * padding[0],
-            (self.size[1] - 2 * padding[1] - (len(self.items) - 1) * spacing)
-            // len(self.items),
-        )
-
-        for i, item in enumerate(self.items):
-            item.position = (
-                self.position[0] + padding[0],
-                self.position[1] + (item_size[1] + spacing) * i + padding[1],
-            )
-            item.size = item_size
-            item.draw(dt, display_surface)
-
-
-class UIHorizontalBox(UIItem):
-    def __init__(
-        self,
-        position: tuple[int, int]=(0, 0),
-        size: tuple[int, int]=(0, 0),
-        items: list[UIItem]=None,
-        padding: tuple[float, float]=(0, 0),
-        spacing: float=0,
-    ):
-        self.position = position
-        self.size = size
-        self.items = items if items else []
-        self.padding = padding
-        self.spacing = spacing
-    
-    def draw(self, dt, display_surface):
-        if not len(self.items):
-            return
-        
-        padding = (self.padding[0] * self.size[0], self.padding[1] * self.size[1])
-        spacing = self.size[0] * self.spacing
-        item_size = (
-            (self.size[0] - 2 * padding[0] - (len(self.items) - 1) * spacing)
-            // len(self.items),
-            self.size[1] - 2 * padding[1],
-        )
-
-        for i, item in enumerate(self.items):
-            item.position = (
-                self.position[0] + (item_size[0] + spacing) * i + padding[0],
-                self.position[1] + padding[1],
-            )
-            item.size = item_size
-            item.draw(dt, display_surface)
+        self.yes_button.handle_click(mouse_pos)
+        self.no_button.handle_click(mouse_pos)
