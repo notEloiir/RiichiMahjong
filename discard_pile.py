@@ -8,13 +8,16 @@ class DiscardPile:
         self.rotation = rotation
         self.tiles = pygame.sprite.Group()
 
-    def update_tiles(self, tile_ids):
+    def update_tiles(self, tiles):
+        if tiles == self.tiles:
+            return
+
         self.tiles.empty()
 
         spacing = 3
         tile_size = (
-            int(0.75 * ((self.size[1] - 2 * spacing) // 3)),
-            (self.size[1] - 2 * spacing) // 3,
+            int(0.75 * ((self.size[1] - 3 * spacing) // 4)),
+            (self.size[1] - 3 * spacing) // 4,
         )
 
         if self.rotation == 0:
@@ -53,13 +56,13 @@ class DiscardPile:
         row = 0
         col = 0
 
-        for tile_id in tile_ids:
+        for tile in tiles:
             if col == 6:
                 row += 1
                 col = 0
 
             self.tiles.add(
-                tile_sprite.TileSprite(get_tile_position(row, col), tile_size, tile_id, self.rotation)
+                tile_sprite.TileSprite(get_tile_position(row, col), tile_size, tile, self.rotation)
             )
 
             col += 1

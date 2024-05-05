@@ -16,11 +16,13 @@ class Label(UIItem):
         self,
         position=(0, 0),
         size=(0, 0),
+        rotation=0,
         text="",
         text_color=settings.PRIMARY_COLOR,
         align="center",
     ) -> None:
         super().__init__(position, size)
+        self.rotation = rotation
         self.text = text
         self.text_color = text_color
         self.align = align
@@ -31,20 +33,49 @@ class Label(UIItem):
             text = font.render(self.text, True, self.text_color)
             if self.align == "left":
                 text_position = (
-                    self.position[0],
-                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                    0,
+                    (self.size[1] / 2 - text.get_height() / 2),
                 )
             elif self.align == "right":
                 text_position = (
-                    self.position[0] + self.size[0] - text.get_width(),
-                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                    self.size[0] - text.get_width(),
+                    (self.size[1] / 2 - text.get_height() / 2),
                 )
             else:
                 text_position = (
-                    self.position[0] + (self.size[0] / 2 - text.get_width() / 2),
-                    self.position[1] + (self.size[1] / 2 - text.get_height() / 2),
+                    (self.size[0] / 2 - text.get_width() / 2),
+                    (self.size[1] / 2 - text.get_height() / 2),
                 )
-            display_surface.blit(text, text_position)
+            rotated_text = pygame.transform.rotate(text, 90 * self.rotation)
+            if self.rotation == 0:
+                rotated_rect = rotated_text.get_rect(
+                    topleft=(
+                        self.position[0] + text_position[0],
+                        self.position[1] + text_position[1],
+                    )
+                )
+            elif self.rotation == 1:
+                rotated_rect = rotated_text.get_rect(
+                    bottomleft=(
+                        self.position[0] + text_position[1],
+                        self.position[1] - text_position[0],
+                    )
+                )
+            elif self.rotation == 2:
+                rotated_rect = rotated_text.get_rect(
+                    bottomright=(
+                        self.position[0] - text_position[0],
+                        self.position[1] - text_position[1],
+                    )
+                )
+            elif self.rotation == 3:
+                rotated_rect = rotated_text.get_rect(
+                    topright=(
+                        self.position[0] - text_position[1],
+                        self.position[1] + text_position[0],
+                    )
+                )
+            display_surface.blit(rotated_text, rotated_rect)
 
 
 class Button(UIItem):
@@ -65,9 +96,9 @@ class Button(UIItem):
         self.bg_color = bg_color
 
         self.label = Label(
-            self.position,
-            self.size,
-            text,
+            position=self.position,
+            size=self.size,
+            text=text,
         )
 
     def draw(self, display_surface):
