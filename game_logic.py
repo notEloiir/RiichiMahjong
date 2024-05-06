@@ -331,8 +331,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                     case MoveType.TSUMO:
                         after_a_kan = event.what == EventType.DRAW_TILE_AFTER_KAN
-                        closed_hands[curr_player_id].append(tile)
-                        closed_hand_counts[curr_player_id][tile.to_int()] += 1
                         event = Event(EventType.WINNER, [curr_player_id, [curr_player_id]])
                         continue
 
@@ -916,6 +914,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                         # show result
                         # TODO: (show) show hand result in GUI instead
+                        print(tiles136, win_tile136)
+                        print(hand_result.error)
                         print(hand_result.han, hand_result.fu)
                         print(hand_result.cost['main'])
                         print(hand_result.yaku)
