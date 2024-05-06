@@ -10,20 +10,23 @@ from player import Player
 class Gui:
     def __init__(self) -> None:
         pygame.init()
-        self.display_surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        # self.display_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        # self.display_surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.display_surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Riichi Mahjong")
         self.running = False
+        self.playing = False
         self.clock = pygame.time.Clock()
         self.dt = 0
         self.game_screen = menu.Menu(self)
-        self.game = None
 
     def switch_game_screen(self, game_screen) -> None:
         self.game_screen = game_screen
 
         if isinstance(self.game_screen, board.Board):
+            self.playing = True
             self.start_game()
+        elif isinstance(self.game_screen, menu.Menu):
+            self.playing = False
 
     def start_game(self):
         init_seed = None
@@ -34,8 +37,8 @@ class Gui:
             filename = "b0_new"
             competitors.append(Player(is_human=False, model=load_model(filename, torch.device("cpu"))))
 
-        self.game = threading.Thread(target=simulate_match, args=(competitors, init_seed, torch.device("cpu"), self.game_screen), daemon=True)
-        self.game.start()
+        game = threading.Thread(target=simulate_match, args=(competitors, init_seed, torch.device("cpu"), self), daemon=True)
+        game.start()
 
     def run(self) -> None:
         self.running = True

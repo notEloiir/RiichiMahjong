@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-import pygame, settings, ui, menu, discard_pile, hand, status_bar, tile_sprite
+import pygame, settings, ui, menu, discard_pile, hand, status_bar, tile_sprite, scores
 from mahjong_enums import MoveType
 from resource_manager import get_sound
 
@@ -14,11 +14,11 @@ class Board:
         self.display_surface = self.gui.display_surface
         self.buffer_surface = pygame.Surface(self.display_surface.get_size())
         self.width, self.height = self.gui.display_surface.get_size()
-        self.game_state = "WAITING"
+        self.game_state = None
         self.possible_moves = []
         self.chosen_move = None
         self.input_ready = False
-        self.curr_player_id = 0
+        self.curr_player_id = None
 
         center_offset = 0.1 * self.height / 2
         pile_spacing = 0.01 * self.height
@@ -30,7 +30,19 @@ class Board:
             ),
             size=(
                 2 * center_offset,
+                center_offset,
+            ),
+            text="",
+            align="center",
+        )
+        self.tiles_count_label = ui.Label(
+            position=(
+                0.5 * self.width - center_offset,
+                0.5 * self.height,
+            ),
+            size=(
                 2 * center_offset,
+                center_offset,
             ),
             text="",
             align="center",
@@ -170,6 +182,8 @@ class Board:
             pop_up_text="Exit to menu?",
         )
 
+        self.score_display = scores.Scores(self.gui, (self.width, self.height))
+
     def update_state(
         self,
         prevalent_wind,
@@ -185,7 +199,8 @@ class Board:
         show_furiten,
     ):
         winds = "East South West North"
-        self.prevalent_wind_label.text = winds.split()[prevalent_wind][0]
+        self.prevalent_wind_label.text = winds.split()[prevalent_wind]
+        self.tiles_count_label.text = f"Wall: {70 - turn_no}"
 
         specials = [
             ("D" if dealer_id == i else "")
@@ -306,18 +321,25 @@ class Board:
         if self.player_hand.selected_tile:
             self.input_ready = True
 
+    def show_scores(self, scores, scores_gained):
+        self.score_display.show(scores, scores_gained)
+
     def handle_event(self, event: pygame.Event) -> None:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                self.exit_pop_up.toggle()
+                if self.score_display.active:
+                    self.score_display.toggle_visible()
+                else:
+                    self.exit_pop_up.toggle()
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if self.exit_pop_up.active:
+            if self.score_display.active and self.score_display.visible:
+                self.score_display.handle_click(event.pos)
+            elif self.exit_pop_up.active:
                 self.exit_pop_up.handle_click(event.pos)
-                return
-            if self.game_state == "DISCARDING":
+            elif self.game_state == "DISCARDING":
                 self.player_hand.handle_click(event.pos)
                 self.discarding_button.handle_click(event.pos)
-            if self.game_state == "DECIDING" or self.game_state == "DECIDING_CHI":
+            elif self.game_state == "DECIDING" or self.game_state == "DECIDING_CHI":
                 for button in self.decision_buttons:
                     button.handle_click(event.pos)
 
@@ -399,6 +421,7 @@ class Board:
         )
 
         self.prevalent_wind_label.draw(self.buffer_surface)
+        self.tiles_count_label.draw(self.buffer_surface)
 
         self.discard_pile_0.draw(self.buffer_surface)
         self.discard_pile_1.draw(self.buffer_surface)
@@ -430,5 +453,6 @@ class Board:
                 button.draw(self.buffer_surface)
 
         self.exit_pop_up.draw(self.buffer_surface)
+        self.score_display.draw(self.buffer_surface)
 
         self.display_surface.blit(self.buffer_surface, (0, 0))
