@@ -1,4 +1,5 @@
 import pygame, tile_sprite, settings
+from tile import Tile
 
 
 class Hand:
@@ -10,7 +11,7 @@ class Hand:
         self.open_tiles = pygame.sprite.Group()
         self.hidden = hidden
 
-    def update_tiles(self, closed_tiles, open_tiles):
+    def update_tiles(self, closed_tiles, melds):
         closed_tiles_sorted = sorted(closed_tiles, key=lambda tile: tile.true_id())
 
         spacing = 3
@@ -62,15 +63,16 @@ class Hand:
                 )
                 i += 1
 
-        if open_tiles != self.open_tiles:
+        if melds != self.open_tiles:
             self.open_tiles.empty()
-            i = 19 - len(open_tiles)
+            i = 19 - sum(len(meld.tiles) for meld in melds)
 
-            for tile in open_tiles:
-                self.open_tiles.add(
-                    tile_sprite.TileSprite(get_tile_position(i), tile_size, tile, self.rotation)
-                )
-                i += 1
+            for meld in melds:
+                for ti in meld.tiles:
+                    self.open_tiles.add(
+                        tile_sprite.TileSprite(get_tile_position(i), tile_size, Tile(ti), self.rotation)
+                    )
+                    i += 1
 
     def draw(self, display_surface):
         self.closed_tiles.draw(display_surface)

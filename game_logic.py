@@ -106,7 +106,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
         board.update_curr_player_id(curr_player_id)
         board.update_state(
             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-            open_hands, discard_piles, dora_indicators, scores,
+            melds, discard_piles, dora_indicators, scores,
             [rs == RiichiStatus.RIICHI for rs in riichi_status],
             [fs != FuritenStatus.DEFAULT for fs in furiten_status],
         )
@@ -144,7 +144,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     board.play_sound("tile_draw")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        open_hands, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators, scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -288,7 +288,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             board.play_sound("tile_meld")
                             board.update_state(
                                 prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                                open_hands, discard_piles, dora_indicators, scores,
+                                melds, discard_piles, dora_indicators, scores,
                                 [rs == RiichiStatus.RIICHI for rs in riichi_status],
                                 [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                             )
@@ -399,7 +399,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     board.play_sound("tile_discard")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        open_hands, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators, scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -424,7 +424,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 if board and furiten_changed:
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        open_hands, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators, scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -701,7 +701,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         board.play_sound("tile_meld")
                         board.update_state(
                             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                            open_hands, discard_piles, dora_indicators, scores,
+                            melds, discard_piles, dora_indicators, scores,
                             [rs == RiichiStatus.RIICHI for rs in riichi_status],
                             [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                         )
