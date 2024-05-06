@@ -409,7 +409,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
-                    sleep(1)
+                    sleep(0.5)
 
                 # update hand status trackers
                 first_move[curr_player_id] = False
