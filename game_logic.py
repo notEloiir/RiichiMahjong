@@ -13,6 +13,8 @@ from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 import mahjong.constants as mc
 
+from board import Board
+from sys import exit
 
 def wind_from_int(wind_id):
     match wind_id:
@@ -32,7 +34,7 @@ class Event:
         self.who = who
 
 
-def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_wind, device, board=None):
+def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_wind, device, gui=None):
     hand_calculator = HandCalculator()
 
     # INIT
@@ -100,9 +102,15 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
         hidden_tile_counts[p][dora_indicator.to_int()] -= 1
         if dora_indicator.is_red5():
             red5_hidden[p][dora_indicator.to_int() // 9] = 0
+    
+    board = None
+    if gui and isinstance(gui.game_screen, Board):
+        board = gui.game_screen
 
     # TODO: (show) update board
     if board:
+        if not gui.playing:
+            exit()
         board.update_curr_player_id(curr_player_id)
         board.update_state(
             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
@@ -120,6 +128,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 # draw the tile and related game logic
                 curr_player_id = event.who
                 if board:
+                    if not gui.playing:
+                        exit()
                     board.update_curr_player_id(curr_player_id)
                     # sleep(0.5)
 
@@ -142,6 +152,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     red5_hidden[curr_player_id][tile.to_int() // 9] = 0
                 # TODO: (show) update board
                 if board:
+                    if not gui.playing:
+                        exit()
                     board.play_sound("tile_draw")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
@@ -230,6 +242,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         choices = [MoveType.PASS, MoveType.TSUMO]
                         board.switch_game_state("DECIDING", possible_moves=choices)
                         while not board.input_ready:
+                            if not gui.playing:
+                                exit()
                             pass
                         what_do = board.chosen_move
                         board.switch_game_state("WAITING")
@@ -237,6 +251,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         choices = [MoveType.PASS, MoveType.RIICHI]
                         board.switch_game_state("DECIDING", possible_moves=choices)
                         while not board.input_ready:
+                            if not gui.playing:
+                                exit()
                             pass
                         what_do = board.chosen_move
                         board.switch_game_state("WAITING")
@@ -244,6 +260,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         choices = [MoveType.PASS, MoveType.KAN]
                         board.switch_game_state("DECIDING", possible_moves=choices)
                         while not board.input_ready:
+                            if not gui.playing:
+                                exit()
                             pass
                         what_do = board.chosen_move
                         board.switch_game_state("WAITING")
@@ -290,6 +308,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                                 red5_hidden[p][dora_indicator.to_int() // 9] = 0
                         # TODO: (show) update board
                         if board:
+                            if not gui.playing:
+                                exit()
                             board.play_sound("tile_meld")
                             board.update_state(
                                 prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
@@ -332,6 +352,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     # TODO: if riichi discard, limit available tiles to those of id34 in car_riichi_discard[current_p..]
                     board.switch_game_state("DISCARDING")
                     while not board.input_ready:
+                        if not gui.playing:
+                            exit()
                         pass
                     discard_tile = board.player_hand.selected_tile.tile
                     board.switch_game_state("WAITING")
@@ -402,6 +424,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                 # TODO: (show) update board
                 if board:
+                    if not gui.playing:
+                        exit()
                     board.play_sound("tile_discard")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
@@ -428,6 +452,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     furiten_changed = True
 
                 if board and furiten_changed:
+                    if not gui.playing:
+                        exit()
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
                         open_hands, discard_piles, dora_indicators, scores,
@@ -508,6 +534,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         if board and len(choices) > 1:
                             board.switch_game_state("DECIDING", possible_moves=choices, target_tile=tile)
                             while not board.input_ready:
+                                if not gui.playing:
+                                    exit()
                                 pass
                             wants[p] = board.chosen_move
                             board.switch_game_state("WAITING")
@@ -554,6 +582,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     while wants[curr_player_id] != MoveType.KAN and wants[curr_player_id] != MoveType.PON:
                         curr_player_id += 1
                     if board:
+                        if not gui.playing:
+                            exit()
                         board.update_curr_player_id(curr_player_id)
                         # sleep(0.5)
                     decision = wants[curr_player_id]
@@ -564,6 +594,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     while wants[curr_player_id] != MoveType.CHI:
                         curr_player_id += 1
                     if board:
+                        if not gui.playing:
+                            exit()
                         board.update_curr_player_id(curr_player_id)
                         # sleep(0.5)
 
@@ -636,6 +668,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             if board:
                                 board.switch_game_state("DECIDING_CHI", possible_moves=possible_chi[curr_player_id], target_tile=tile)
                                 while not board.input_ready:
+                                    if not gui.playing:
+                                        exit()
                                     pass
                                 best_chi = possible_chi[curr_player_id][board.chosen_move]
                                 board.switch_game_state("WAITING")
@@ -705,6 +739,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     nagashi_mangan[from_who] = False
                     # TODO: (show) update board
                     if board:
+                        if not gui.playing:
+                            exit()
                         board.play_sound("tile_meld")
                         board.update_state(
                             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
@@ -758,7 +794,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                     if competitors[p].is_human and is_ron_possible[p]:
                         # TODO: (query player) ask player if they want to ron
-                        wants[p] = MoveType.PASS
+                        board.switch_game_state("DECIDING", possible_moves=[MoveType.PASS, MoveType.RON], target_tile=tile)
+                        while not board.input_ready:
+                            if not gui.playing:
+                                exit()
+                            pass
+                        wants[p] = board.chosen_move
+                        board.switch_game_state("WAITING")
+                        # wants[p] = MoveType.PASS
                     elif not competitors[p].is_human and is_ron_possible[p]:
                         # prepare the rest of input tensor
                         inputs = InputFeatures.from_args(
@@ -895,14 +938,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 return scores, dealer_id in winners
 
 
-def simulate_match(competitors, seed, device, board=None):
+def simulate_match(competitors, seed, device, gui=None):
     scores = [250, 250, 250, 250]
     if seed:
         random.seed(seed)
     non_repeat_round_no = 0
     round_no = 0
     while not (min(scores) <= 0 or (non_repeat_round_no >= 3 and max(scores) >= 500) or round_no >= 12):
-        scores, dealer_won = simulate_round(competitors, scores, non_repeat_round_no, 0, device, board)
+        scores, dealer_won = simulate_round(competitors, scores, non_repeat_round_no, 0, device, gui)
         round_no += 1
         if not dealer_won:
             non_repeat_round_no += 1

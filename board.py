@@ -14,11 +14,11 @@ class Board:
         self.display_surface = self.gui.display_surface
         self.buffer_surface = pygame.Surface(self.display_surface.get_size())
         self.width, self.height = self.gui.display_surface.get_size()
-        self.game_state = "WAITING"
+        self.game_state = None
         self.possible_moves = []
         self.chosen_move = None
         self.input_ready = False
-        self.curr_player_id = 0
+        self.curr_player_id = None
 
         center_offset = 0.1 * self.height / 2
         pile_spacing = 0.01 * self.height

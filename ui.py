@@ -28,8 +28,10 @@ class Label(UIItem):
         self.align = align
 
     def draw(self, display_surface):
+        lines_no = self.text.count("\n") + 1
+
         if self.text:
-            font = pygame.font.Font(settings.FONT_NAME, int(self.size[1]) // 2)
+            font = pygame.font.Font(settings.FONT_NAME, int(self.size[1]) // (2 * lines_no))
             text = font.render(self.text, True, self.text_color)
             if self.align == "left":
                 text_position = (
@@ -141,16 +143,16 @@ class YesOrNoPopUp(UIItem):
         )
 
         self.yes_button = Button(
-            (self.position[0] + int(0.1 * self.size[0]), self.position[1] + int(0.6 * self.size[1])),
-            (int(0.35 * self.size[0]), int(0.3 * self.size[1])),
+            (self.position[0] + 0.1 * self.size[0], self.position[1] + 0.6 * self.size[1]),
+            (0.35 * self.size[0], 0.3 * self.size[1]),
             on_click=on_yes,
             text=yes_text,
             bg_color="#8CBEB2",
             text_color=self.text_color,
         )
         self.no_button = Button(
-            (self.position[0] + int(0.55 * self.size[0]), self.position[1] + int(0.6 * self.size[1])),
-            (int(0.35 * self.size[0]), int(0.3 * self.size[1])),
+            (self.position[0] + 0.55 * self.size[0], self.position[1] + 0.6 * self.size[1]),
+            (0.35 * self.size[0], 0.3 * self.size[1]),
             on_click=on_no,
             text=no_text,
             bg_color="#F3B562",
