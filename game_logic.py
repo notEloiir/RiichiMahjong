@@ -41,7 +41,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
     dealer_id = (init_wind + non_repeat_round_no) % 4
     prevalent_wind = (init_wind + (non_repeat_round_no // 4)) % 4
     seat_wind = [(non_repeat_round_no + i) % 4 for i in range(4)]
-    turn_no = 1
+    turn_no = 0
     curr_player_id = dealer_id
     closed_hands: list[list[Tile]] = [[] for _ in range(4)]
     closed_hand_counts = [[0] * 34 for _ in range(4)]
@@ -136,8 +136,8 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     if turn_no == 70:
                         event = Event(EventType.WALL_EXHAUSTED, None)
                         continue
-                    tile = wall[turn_no - 1]
                     turn_no += 1
+                    tile = wall[turn_no - 1]
                 else:
                     tile = dead_wall[dora_revealed_no - 1]
                     if dora_revealed_no == 5 and sum(open_hand_counts[curr_player_id]) != 16:  # 4 kans by >1 player
