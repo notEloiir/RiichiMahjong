@@ -191,7 +191,7 @@ class Board:
         turn_no,
         dealer_id,
         closed_hands,
-        open_hands,
+        melds,
         discard_piles,
         dora_indicators,
         scores,
@@ -221,10 +221,10 @@ class Board:
             winds.split()[seat_wind[3]], str(scores[3]), specials[3]
         )
 
-        self.player_hand.update_tiles(closed_hands[0], open_hands[0])
-        self.bot_hand_1.update_tiles(closed_hands[1], open_hands[1])
-        self.bot_hand_2.update_tiles(closed_hands[2], open_hands[2])
-        self.bot_hand_3.update_tiles(closed_hands[3], open_hands[3])
+        self.player_hand.update_tiles(closed_hands[0], melds[0])
+        self.bot_hand_1.update_tiles(closed_hands[1], melds[1])
+        self.bot_hand_2.update_tiles(closed_hands[2], melds[2])
+        self.bot_hand_3.update_tiles(closed_hands[3], melds[3])
 
         self.discard_pile_0.update_tiles(discard_piles[0])
         self.discard_pile_1.update_tiles(discard_piles[1])

@@ -107,18 +107,17 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
     if gui and isinstance(gui.game_screen, Board):
         board = gui.game_screen
 
-    # TODO: (show) update board
+    # update board
     if board:
         if not gui.playing:
             exit()
         board.update_curr_player_id(curr_player_id)
         board.update_state(
             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-            open_hands, discard_piles, dora_indicators, scores,
+            melds, discard_piles, dora_indicators, scores,
             [rs == RiichiStatus.RIICHI for rs in riichi_status],
             [fs != FuritenStatus.DEFAULT for fs in furiten_status],
         )
-        # sleep(1)
 
     # GAME LOGIC
     event = Event(EventType.DRAW_TILE, dealer_id)
@@ -150,14 +149,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 if tile.is_red5():
                     red5_closed_hand[curr_player_id][tile.to_int() // 9] = 1
                     red5_hidden[curr_player_id][tile.to_int() // 9] = 0
-                # TODO: (show) update board
+                # update board
                 if board:
                     if not gui.playing:
                         exit()
                     board.play_sound("tile_draw")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        open_hands, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators, scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -167,7 +166,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 if competitors[curr_player_id].is_human and first_move[curr_player_id] and sum(
                         [closed_hand_counts[curr_player_id][i] for i in
                          mc.TERMINAL_INDICES + list(range(26, 34))]) >= 9:
-                    # TODO: (query player) ask player if they want to abort the round (draw)
+                    # ask player if they want to abort the round (draw)
                     abort = False
                     if abort:
                         event = Event(EventType.ROUND_DRAW, -1)
@@ -181,13 +180,12 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                                                        open_hand_counts[curr_player_id][i] for i in range(34)],
                                                       melds[curr_player_id])
                 is_riichi_possible = tiles_to_ready_hand == 0 and hand_is_closed[curr_player_id] \
-                                     and not hand_in_riichi[curr_player_id] and scores[curr_player_id] > 10
+                    and not hand_in_riichi[curr_player_id] and scores[curr_player_id] > 10
                 is_tsumo_possible = False
-                if furiten_status[curr_player_id] == FuritenStatus.DEFAULT and \
-                        agari.Agari().is_agari(
+                if agari.Agari().is_agari(
                             [closed_hand_counts[curr_player_id][i] + open_hand_counts[curr_player_id][i] +
                              int(tile.to_int() == i) for i in range(34)], open_melds_tile_ids[curr_player_id]):
-                    tiles136 = [t.true_id() for t in closed_hands[curr_player_id]] + [tile.true_id()]
+                    tiles136 = [t.true_id() for t in closed_hands[curr_player_id] + open_hands[curr_player_id]]
                     win_tile136 = closed_hands[curr_player_id][-1].true_id()
                     hand_result = hand_calculator.estimate_hand_value(
                         tiles=tiles136, win_tile=win_tile136, melds=melds[curr_player_id], config=HandConfig(
@@ -237,7 +235,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     what_do = MoveType(action.argmax(0).item() + 1)
 
                 else:
-                    # TODO: (query player) let player decide
+                    # let player decide
                     if is_tsumo_possible:
                         choices = [MoveType.PASS, MoveType.TSUMO]
                         board.switch_game_state("DECIDING", possible_moves=choices)
@@ -256,7 +254,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             pass
                         what_do = board.chosen_move
                         board.switch_game_state("WAITING")
-                    elif is_closed_kan_possible or is_added_kan_possible:
+                    else:  # is_closed_kan_possible or is_added_kan_possible
                         choices = [MoveType.PASS, MoveType.KAN]
                         board.switch_game_state("DECIDING", possible_moves=choices)
                         while not board.input_ready:
@@ -265,9 +263,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             pass
                         what_do = board.chosen_move
                         board.switch_game_state("WAITING")
-
-                    # temporary
-                    # what_do = MoveType.DISCARD
 
                 # game logic based on decision made
                 match what_do:
@@ -306,18 +301,17 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             hidden_tile_counts[p][dora_indicator.to_int()] -= 1
                             if dora_indicator.is_red5():
                                 red5_hidden[p][dora_indicator.to_int() // 9] = 0
-                        # TODO: (show) update board
+                        # update board
                         if board:
                             if not gui.playing:
                                 exit()
                             board.play_sound("tile_meld")
                             board.update_state(
                                 prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                                open_hands, discard_piles, dora_indicators, scores,
+                                melds, discard_piles, dora_indicators, scores,
                                 [rs == RiichiStatus.RIICHI for rs in riichi_status],
                                 [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                             )
-                            # sleep(1)
 
                         # check kan theft, then get another tile from dead wall
                         event = Event(EventType.AFTER_KAN, curr_player_id)
@@ -350,7 +344,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         sleep(0.5)
                     discard_tile = closed_hands[curr_player_id][-1]
                 elif competitors[curr_player_id].is_human:
-                    # TODO: (query player) ask player what to discard
+                    # ask player what to discard
                     # TODO: if riichi discard, limit available tiles to those of id34 in car_riichi_discard[current_p..]
                     board.switch_game_state("DISCARDING")
                     while not board.input_ready:
@@ -426,14 +420,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             [closed_hand_counts[curr_player_id][j] + open_hand_counts[curr_player_id][j]
                              + int(bool(i)) for j in range(34)], open_melds_tile_ids[curr_player_id])
 
-                # TODO: (show) update board
+                # update board
                 if board:
                     if not gui.playing:
                         exit()
                     board.play_sound("tile_discard")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        open_hands, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators, scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -460,7 +454,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         exit()
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        open_hands, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators, scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -534,7 +528,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             choices.append(MoveType.KAN)
                         if is_ron_possible[p]:
                             choices.append(MoveType.RON)
-                        # TODO: (query player) ask player what they want
+                        # ask player what they want
                         if board and len(choices) > 1:
                             board.switch_game_state("DECIDING", possible_moves=choices, target_tile=tile)
                             while not board.input_ready:
@@ -734,7 +728,6 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         if riichi_status[from_who] == RiichiStatus.RIICHI_NO_STICK:
                             riichi_status[from_who] = RiichiStatus.RIICHI
                             scores[from_who] -= 10
-                            # TODO: (show) put down riichi stick
 
                 # update hand status trackers
                 for p in range(4):
@@ -747,14 +740,14 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     hand_is_closed[curr_player_id] = 0
                     discard_piles[from_who].pop()
                     nagashi_mangan[from_who] = False
-                    # TODO: (show) update board
+                    # update board
                     if board:
                         if not gui.playing:
                             exit()
                         board.play_sound("tile_meld")
                         board.update_state(
                             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                            open_hands, discard_piles, dora_indicators, scores,
+                            melds, discard_piles, dora_indicators, scores,
                             [rs == RiichiStatus.RIICHI for rs in riichi_status],
                             [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                         )
