@@ -29,7 +29,7 @@ class Gui:
             self.playing = False
 
     def start_game(self):
-        init_seed = 666
+        init_seed = None
 
         competitors = []
         competitors.append(Player(is_human=True))
