@@ -923,7 +923,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         # TODO: (show) show hand result in GUI instead
                         yaku_text += (
                             ["Player", "Bot1", "Bot2", "Bot3"][p]
-                            + ("<-" + ["Player", "Bot1", "Bot2", "Bot3"][dealt_in] if p != dealt_in else "")
+                            + (f" ({['Player', 'Bot1', 'Bot2', 'Bot3'][dealt_in]})" if p != dealt_in else "")
                             + f":{str(hand_result.yaku)}\n"
                         )
                         print(hand_result.han, hand_result.fu)
