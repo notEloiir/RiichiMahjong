@@ -321,8 +321,8 @@ class Board:
         if self.player_hand.selected_tile:
             self.input_ready = True
 
-    def show_scores(self, scores, scores_gained):
-        self.score_display.show(scores, scores_gained)
+    def show_scores(self, scores, scores_gained, message):
+        self.score_display.show(scores, scores_gained, message)
 
     def handle_event(self, event: pygame.Event) -> None:
         if event.type == pygame.KEYDOWN:

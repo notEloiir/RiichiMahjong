@@ -35,9 +35,15 @@ class Gui:
         competitors.append(Player(is_human=True))
         for _ in range(3):
             filename = "b0_new"
-            competitors.append(Player(is_human=False, model=load_model(filename, torch.device("cpu"))))
+            competitors.append(
+                Player(is_human=False, model=load_model(filename, torch.device("cpu")))
+            )
 
-        game = threading.Thread(target=simulate_match, args=(competitors, init_seed, torch.device("cpu"), self), daemon=True)
+        game = threading.Thread(
+            target=simulate_match,
+            args=(competitors, init_seed, torch.device("cpu"), self),
+            daemon=True,
+        )
         game.start()
 
     def run(self) -> None:

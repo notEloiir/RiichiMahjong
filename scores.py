@@ -9,6 +9,13 @@ class Scores:
         self.visible = False
         self.final = False
 
+        self.message_label = ui.Label(
+            position=(0.1 * self.width, 0.1 * self.height),
+            size=(0.9 * self.width, 0.1 * self.height),
+            text="",
+            align="left",
+        )
+
         self.player_labels = []
         player_label_x = 0.1 * self.width
         player_label_y = 0.2 * self.height
@@ -41,11 +48,12 @@ class Scores:
             text="Exit to menu",
         )
 
-    def show(self, scores, scores_gained):
+    def show(self, scores, scores_gained, message):
+        self.message_label.text = message
         player_names = ["Player", "Bot1", "Bot2", "Bot3"]
         for i, player_label in enumerate(self.player_labels):
             player_label.text = (
-                player_names[i].ljust(80 - len(player_names[i]), ".")
+                player_names[i].ljust(80, ".")
                 + str(scores[i])
                 + (" ({:+})".format(scores_gained[i]))
             )
@@ -72,6 +80,7 @@ class Scores:
 
         display_surface.fill("#8CBEB2")
 
+        self.message_label.draw(display_surface)
         for player_label in self.player_labels:
             player_label.draw(display_surface)
         if not self.final:

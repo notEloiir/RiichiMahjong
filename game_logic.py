@@ -127,10 +127,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 # draw the tile and related game logic
                 curr_player_id = event.who
                 if board:
+                    sleep(0.5)
                     if not gui.playing:
                         exit()
                     board.update_curr_player_id(curr_player_id)
-                    sleep(0.5)
+                    # sleep(0.5)
 
                 if event.what == EventType.DRAW_TILE:
                     if turn_no == 70:
@@ -760,6 +761,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
             case EventType.ROUND_DRAW:
                 # no score change, same dealer next round
                 # TODO: (show) show scores
+                if board:
+                    board.show_scores(scores, [0] * 4, "Draw")
+                    while not board.score_display.ready_to_continue:
+                        if not gui.playing:
+                            exit()
                 return scores, True
 
             case EventType.AFTER_KAN:
@@ -859,7 +865,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             scores[p] += 30 if has_tenpai[p] else -10
                 # TODO: (show) show scores
                 if board:
-                    board.show_scores(scores, [0] * 4)
+                    board.show_scores(scores, [0] * 4, "Wall exhausted")
                     while not board.score_display.ready_to_continue:
                         if not gui.playing:
                             exit()
@@ -869,6 +875,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                 dealt_in, winners = event.who
 
                 points_gained = [0] * 4
+                yaku_text = ""
                 for p in range(4):
                     if p in winners:
                         # possible
@@ -914,8 +921,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                         # show result
                         # TODO: (show) show hand result in GUI instead
-                        print(tiles136, win_tile136)
-                        print(hand_result.error)
+                        yaku_text += (
+                            ["Player", "Bot1", "Bot2", "Bot3"][p]
+                            + ("<-" + ["Player", "Bot1", "Bot2", "Bot3"][dealt_in] if p != dealt_in else "")
+                            + f":{str(hand_result.yaku)}\n"
+                        )
                         print(hand_result.han, hand_result.fu)
                         print(hand_result.cost['main'])
                         print(hand_result.yaku)
@@ -943,7 +953,11 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     scores[p] += points_gained[p]
                 # TODO: (show) show scores and points gained
                 if board:
-                    board.show_scores(scores, points_gained)
+                    board.show_scores(
+                        scores,
+                        points_gained,
+                        yaku_text.rstrip("\n"),
+                    )
                     while not board.score_display.ready_to_continue:
                         if not gui.playing:
                             exit()
