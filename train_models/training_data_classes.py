@@ -1,6 +1,6 @@
 import torch
 from random import randint
-from mahjong_enums import MoveType
+from game.mahjong_enums import MoveType
 
 
 def roll_list_backwards(lst, roll_by):
@@ -68,9 +68,9 @@ class InputFeatures:
         # augment the minority class samples
         match move_type:
             case MoveType.CHI | MoveType.PON:
-                how_many = 5
+                how_many = 6
             case MoveType.RIICHI | MoveType.KAN | MoveType.TSUMO | MoveType.RON:
-                how_many = 10
+                how_many = 12
             case _:
                 return cls(tensor)
 
@@ -106,19 +106,19 @@ class TrainingData:
     def set_weight(self, move_type: MoveType, turn_no, hand_in_riichi):
         match move_type:
             case MoveType.DISCARD | MoveType.PASS:
-                discard_weight = 0.5 + turn_no * 0.01
+                discard_weight = 1.
                 call_weight = 0.
                 action_weight = 1.
             case MoveType.CHI | MoveType.PON | MoveType.KAN:
                 discard_weight = 0.
                 call_weight = 1.
-                action_weight = 4.
+                action_weight = 5.
             case _:  # RIICHI, RON, TSUMO
                 discard_weight = 0.
                 call_weight = 0.
-                action_weight = 8.
+                action_weight = 12.
 
-        multiplier = 1. + sum(hand_in_riichi) * 0.5
+        multiplier = 1. + sum(hand_in_riichi) * 0.5 + turn_no * 0.01
         discard_weight *= multiplier
         call_weight *= multiplier
         action_weight *= multiplier

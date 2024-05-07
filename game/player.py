@@ -1,4 +1,4 @@
-from models import MahjongNN
+from train_models.models import MahjongNN
 from typing import Optional
 
 

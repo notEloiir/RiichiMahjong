@@ -1,4 +1,5 @@
-import ui, menu
+import gui.ui as ui
+import gui.menu as menu
 
 
 class Scores:

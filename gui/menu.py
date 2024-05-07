@@ -1,9 +1,10 @@
-import pygame, ui, board
-from gui import Gui
+import pygame
+import gui.ui as ui
+import gui.board as board
 
 
-class Menu():
-    def __init__(self, gui: Gui):
+class Menu:
+    def __init__(self, gui):
         self.gui = gui
         self.display_surface = self.gui.display_surface
         self.width, self.height = self.display_surface.get_size()

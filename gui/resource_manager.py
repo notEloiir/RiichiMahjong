@@ -1,4 +1,5 @@
-import pygame, os
+import pygame
+import os
 
 
 tile_img_path = os.path.join("resources", "img", "tiles")

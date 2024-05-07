@@ -1,10 +1,12 @@
-import pygame, menu, board
-from settings import *
+import pygame
+import gui.menu as menu
+import gui.board as board
 from sys import exit
-import torch, threading
-from game_logic import simulate_match
-from models import load_model
-from player import Player
+import torch
+import threading
+from game.game_logic import simulate_match
+from train_models.models import load_model
+from game.player import Player
 
 
 class Gui:
@@ -62,8 +64,3 @@ class Gui:
 
         pygame.quit()
         exit()
-
-
-if __name__ == "__main__":
-    game = Gui()
-    game.run()

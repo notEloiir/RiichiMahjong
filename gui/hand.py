@@ -1,5 +1,7 @@
-import pygame, tile_sprite, settings
-from tile import Tile
+import pygame
+import gui.tile_sprite as tile_sprite
+import gui.settings as settings
+from game.tile import Tile
 
 
 class Hand:
