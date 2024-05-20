@@ -2,10 +2,10 @@ import os
 import time
 import traceback
 from xml.etree.ElementTree import ParseError
-from db_connect import get_match_log_data
-from parse_logs import parse_match_log
-from label_data import get_data_from_replay
-from training_data_classes import TrainingData
+from train_models.db_connect import get_match_log_data
+from train_models.parse_logs import parse_match_log
+from train_models.label_data import get_data_from_replay
+from train_models.training_data_classes import TrainingData
 
 import torch.nn as nn
 import torch.optim as optim
@@ -32,7 +32,7 @@ class MahjongNN(nn.Module):
         # sigmoid in is get_prediction() for usage, for training it's in BCEWithLogitsLoss
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=20, factor=0.5)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=150, factor=0.5, min_lr=1e-5)
 
         self.device = device
         self.to(device)

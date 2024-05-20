@@ -1,11 +1,12 @@
 import random
-from training_data_classes import InputFeatures
+from train_models.training_data_classes import InputFeatures
 import torch
-from player import Player
-from mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
-from tile import Tile
-from shanten import correct_shanten
+from game.player import Player
+from game.mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
+from game.tile import Tile
+from game.shanten import correct_shanten
 from time import sleep
+from sys import exit
 
 from mahjong import agari
 from mahjong.meld import Meld
@@ -13,8 +14,6 @@ from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 import mahjong.constants as mc
 
-from board import Board
-from sys import exit
 
 def wind_from_int(wind_id):
     match wind_id:
@@ -104,7 +103,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
             red5_hidden[p][dora_indicator.to_int() // 9] = 0
     
     board = None
-    if gui and isinstance(gui.game_screen, Board):
+    if gui:
         board = gui.game_screen
 
     # update board

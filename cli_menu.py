@@ -1,8 +1,8 @@
 import torch
 
-from models import get_device, initialize_model, train_model, save_model, load_model
-from compare_models import versus
-from player import Player
+from train_models.models import get_device, initialize_model, train_model, save_model, load_model
+from train_models.compare_models import versus
+from game.player import Player
 
 
 if __name__ == "__main__":

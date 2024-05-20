@@ -1,4 +1,5 @@
-import pygame, settings
+import pygame
+import gui.settings as settings
 
 
 class UIItem:

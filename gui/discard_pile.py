@@ -1,4 +1,5 @@
-import pygame, tile_sprite
+import pygame
+import gui.tile_sprite as tile_sprite
 
 
 class DiscardPile:

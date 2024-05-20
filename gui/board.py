@@ -1,8 +1,16 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-import pygame, settings, ui, menu, discard_pile, hand, status_bar, tile_sprite, scores
-from mahjong_enums import MoveType
-from resource_manager import get_sound
+import pygame
+import gui.settings as settings
+import gui.ui as ui
+import gui.menu as menu
+import gui.discard_pile as discard_pile
+import gui.hand as hand
+import gui.status_bar as status_bar
+import gui.tile_sprite as tile_sprite
+import gui.scores as scores
+from game.mahjong_enums import MoveType
+from gui.resource_manager import get_sound
 
 if TYPE_CHECKING:
     from gui import Gui

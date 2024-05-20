@@ -2,8 +2,8 @@ import gzip
 import xml.etree.ElementTree as ET
 from urllib.parse import unquote
 import re
-from mahjong_enums import MoveType
-from tile import Tile
+from game.mahjong_enums import MoveType
+from game.tile import Tile
 
 
 class MoveData:
@@ -114,7 +114,7 @@ def parse_match_log(log_raw):
 
             case "UN":
                 if "dan" in event.attrib.keys():
-                    if max(int(rank) for rank in event.attrib["dan"].split(',')) < 17:
+                    if max(int(rank) for rank in event.attrib["dan"].split(',')) <= 17:
                         # filter low rank games
                         return match_info
 

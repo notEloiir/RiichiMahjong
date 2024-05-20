@@ -1,6 +1,6 @@
 import random
 from operator import add
-from game_logic import simulate_match
+from game.game_logic import simulate_match
 
 
 def versus(competitors, how_many, init_seed, device):

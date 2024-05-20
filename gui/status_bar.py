@@ -1,4 +1,5 @@
-import pygame, ui
+import pygame
+import gui.ui as ui
 
 
 class StatusBar:
