@@ -56,6 +56,19 @@ class Board:
             align="center",
         )
 
+        self.dora_indicators_label = ui.Label(
+            position=(0.27 * self.height, 0.25 * self.height),
+            size=(0.3 * self.width, 0.05 * self.height),
+            text="Dora indicators",
+            align="left",
+        )
+
+        self.dora_indicators = discard_pile.DiscardPile(
+            position=(0.27 * self.height, 0.3 * self.height),
+            size=(0.6 * self.width, 0.15 * self.height),
+            rotation=0,
+        )
+
         self.discard_pile_0 = discard_pile.DiscardPile(
             position=(
                 0.5 * self.width - center_offset + pile_spacing,
@@ -233,6 +246,8 @@ class Board:
         self.bot_hand_1.update_tiles(closed_hands[1], melds[1])
         self.bot_hand_2.update_tiles(closed_hands[2], melds[2])
         self.bot_hand_3.update_tiles(closed_hands[3], melds[3])
+
+        self.dora_indicators.update_tiles(dora_indicators)
 
         self.discard_pile_0.update_tiles(discard_piles[0])
         self.discard_pile_1.update_tiles(discard_piles[1])
@@ -430,6 +445,9 @@ class Board:
 
         self.prevalent_wind_label.draw(self.buffer_surface)
         self.tiles_count_label.draw(self.buffer_surface)
+
+        self.dora_indicators_label.draw(self.buffer_surface)
+        self.dora_indicators.draw(self.buffer_surface)
 
         self.discard_pile_0.draw(self.buffer_surface)
         self.discard_pile_1.draw(self.buffer_surface)

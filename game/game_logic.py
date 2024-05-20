@@ -113,7 +113,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
         board.update_curr_player_id(curr_player_id)
         board.update_state(
             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-            melds, discard_piles, dora_indicators, scores,
+            melds, discard_piles, dora_indicators[:dora_revealed_no], scores,
             [rs == RiichiStatus.RIICHI for rs in riichi_status],
             [fs != FuritenStatus.DEFAULT for fs in furiten_status],
         )
@@ -156,7 +156,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     board.play_sound("tile_draw")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        melds, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators[:dora_revealed_no], scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -308,7 +308,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                             board.play_sound("tile_meld")
                             board.update_state(
                                 prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                                melds, discard_piles, dora_indicators, scores,
+                                melds, discard_piles, dora_indicators[:dora_revealed_no], scores,
                                 [rs == RiichiStatus.RIICHI for rs in riichi_status],
                                 [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                             )
@@ -425,7 +425,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     board.play_sound("tile_discard")
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        melds, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators[:dora_revealed_no], scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -452,7 +452,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         exit()
                     board.update_state(
                         prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                        melds, discard_piles, dora_indicators, scores,
+                        melds, discard_piles, dora_indicators[:dora_revealed_no], scores,
                         [rs == RiichiStatus.RIICHI for rs in riichi_status],
                         [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                     )
@@ -745,7 +745,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                         board.play_sound("tile_meld")
                         board.update_state(
                             prevalent_wind, seat_wind, turn_no, dealer_id, closed_hands,
-                            melds, discard_piles, dora_indicators, scores,
+                            melds, discard_piles, dora_indicators[:dora_revealed_no], scores,
                             [rs == RiichiStatus.RIICHI for rs in riichi_status],
                             [fs != FuritenStatus.DEFAULT for fs in furiten_status],
                         )
@@ -875,64 +875,63 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                 points_gained = [0] * 4
                 yaku_text = ""
-                for p in range(4):
-                    if p in winners:
-                        # possible
-                        is_tsumo = (dealt_in in winners)
-                        is_riichi = bool(hand_in_riichi[p])
-                        is_ippatsu = ippatsu[p]
-                        is_rinshan = after_a_kan
-                        is_chankan = stolen_kan
-                        is_haitei = is_tsumo and turn_no == 70
-                        is_houtei = not is_tsumo and turn_no == 70
-                        is_daburu_riichi = double_riichi[p]
+                for p in winners:
+                    # possible
+                    is_tsumo = (dealt_in in winners)
+                    is_riichi = bool(hand_in_riichi[p])
+                    is_ippatsu = ippatsu[p]
+                    is_rinshan = after_a_kan
+                    is_chankan = stolen_kan
+                    is_haitei = is_tsumo and turn_no == 70
+                    is_houtei = not is_tsumo and turn_no == 70
+                    is_daburu_riichi = double_riichi[p]
 
-                        # pretty much impossible
-                        is_nagashi_mangan = nagashi_mangan[p]  # 🗿 https://riichi.wiki/Nagashi_mangan
-                        is_tenhou = is_tsumo and turn_no == 1  # win on first draw (dealer)
-                        # ron on starting hand (no draws) as a first call of the round
-                        is_renhou = not is_tsumo and first_move[p] and all(not m for m in melds)
-                        # win on first draw, before any call (not dealer)
-                        is_chiihou = is_tsumo and turn_no > 1 and first_move[p]
-                        is_open_riichi = False  # this rule variation doesn't use open riichi yaku
-                        is_paarenchan = False  # this rule variation doesn't use parenchan yaku
+                    # pretty much impossible
+                    is_nagashi_mangan = nagashi_mangan[p]  # 🗿 https://riichi.wiki/Nagashi_mangan
+                    is_tenhou = is_tsumo and turn_no == 1  # win on first draw (dealer)
+                    # ron on starting hand (no draws) as a first call of the round
+                    is_renhou = not is_tsumo and first_move[p] and all(not m for m in melds)
+                    # win on first draw, before any call (not dealer)
+                    is_chiihou = is_tsumo and turn_no > 1 and first_move[p]
+                    is_open_riichi = False  # this rule variation doesn't use open riichi yaku
+                    is_paarenchan = False  # this rule variation doesn't use parenchan yaku
 
-                        # other info
-                        player_wind = wind_from_int(seat_wind[p])
-                        round_wind = wind_from_int(non_repeat_round_no)
-                        # riichi sticks (no of bets placed)
-                        kyoutaku_number = sum(rs == RiichiStatus.RIICHI for rs in riichi_status)
-                        tsumi_number = 0  # penalty sticks
-                        options = OptionalRules(has_aka_dora=True)
+                    # other info
+                    player_wind = wind_from_int(seat_wind[p])
+                    round_wind = wind_from_int(non_repeat_round_no)
+                    # riichi sticks (no of bets placed)
+                    kyoutaku_number = sum(rs == RiichiStatus.RIICHI for rs in riichi_status)
+                    tsumi_number = 0  # penalty sticks
+                    options = OptionalRules(has_aka_dora=True)
 
-                        config = HandConfig(is_tsumo, is_riichi, is_ippatsu, is_rinshan, is_chankan, is_haitei,
-                                            is_houtei, is_daburu_riichi, is_nagashi_mangan, is_tenhou, is_renhou,
-                                            is_chiihou, is_open_riichi, player_wind, round_wind, kyoutaku_number,
-                                            tsumi_number, is_paarenchan, options)
+                    config = HandConfig(is_tsumo, is_riichi, is_ippatsu, is_rinshan, is_chankan, is_haitei,
+                                        is_houtei, is_daburu_riichi, is_nagashi_mangan, is_tenhou, is_renhou,
+                                        is_chiihou, is_open_riichi, player_wind, round_wind, kyoutaku_number,
+                                        tsumi_number, is_paarenchan, options)
 
-                        tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]]
-                        win_tile136 = closed_hands[p][-1].true_id()
-                        dora_indicators136 = [t.true_id() for t in dora_indicators[:dora_revealed_no]] + \
-                                             [t.true_id() for t in uradora_indicators[:dora_revealed_no]]
-                        hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
-                                                                          melds=melds[p], config=config,
-                                                                          dora_indicators=dora_indicators136)
+                    tiles136 = [t.true_id() for t in closed_hands[p] + open_hands[p]]
+                    win_tile136 = closed_hands[p][-1].true_id()
+                    dora_indicators136 = [t.true_id() for t in dora_indicators[:dora_revealed_no]] + \
+                                            [t.true_id() for t in uradora_indicators[:dora_revealed_no]]
+                    hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
+                                                                        melds=melds[p], config=config,
+                                                                        dora_indicators=dora_indicators136)
 
-                        # show result
-                        # TODO: (show) show hand result in GUI instead
-                        yaku_text += (
-                            ["Player", "Bot1", "Bot2", "Bot3"][p]
-                            + ("<-" + ["Player", "Bot1", "Bot2", "Bot3"][dealt_in] if p != dealt_in else "")
-                            + f":{str(hand_result.yaku)}\n"
-                        )
-                        print(hand_result.han, hand_result.fu)
-                        print(hand_result.cost['main'])
-                        print(hand_result.yaku)
-                        for fu_item in hand_result.fu_details:
-                            print(fu_item)
-                        print('')
+                    # show result
+                    # TODO: (show) show hand result in GUI instead
+                    yaku_text += (
+                        ["Player", "Bot1", "Bot2", "Bot3"][p]
+                        + ("<-" + ["Player", "Bot1", "Bot2", "Bot3"][dealt_in] if p != dealt_in else "")
+                        + f":{str(hand_result.yaku)}\n"
+                    )
+                    print(hand_result.han, hand_result.fu)
+                    print(hand_result.cost['main'])
+                    print(hand_result.yaku)
+                    for fu_item in hand_result.fu_details:
+                        print(fu_item)
+                    print('')
 
-                        points_gained[p] = hand_result.cost['main'] // 100
+                    points_gained[p] = hand_result.cost['main'] // 100
                 total_plus = sum(points_gained)
 
                 if dealt_in not in winners:  # win by ron
