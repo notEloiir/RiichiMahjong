@@ -875,6 +875,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
 
                 points_gained = [0] * 4
                 yaku_text = ""
+
                 for p in winners:
                     # possible
                     is_tsumo = (dealt_in in winners)
@@ -932,6 +933,7 @@ def simulate_round(competitors: list[Player], scores, non_repeat_round_no, init_
                     print('')
 
                     points_gained[p] = hand_result.cost['main'] // 100
+
                 total_plus = sum(points_gained)
 
                 if dealt_in not in winners:  # win by ron
