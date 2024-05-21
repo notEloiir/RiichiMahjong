@@ -30,7 +30,9 @@ class TileSprite(pygame.sprite.Sprite):
         if self.hidden:
             img = resource_manager.get_tile_image("Back")
         else:
-            img = resource_manager.get_tile_image(self.tile_name)
+            img = resource_manager.get_tile_image(
+                self.tile_name + ("-Dora" if self.tile.is_red5() else "")
+            )
         scaled_img = pygame.transform.smoothscale(img, self.size).convert_alpha()
         rotated_img = pygame.transform.rotate(scaled_img, 90 * self.rotation)
         return rotated_img
