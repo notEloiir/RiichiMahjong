@@ -1,15 +1,16 @@
 import pygame
-import gui.menu as menu
-import gui.board as board
-from sys import exit
+import sys
 import torch
 import threading
-from game.game_logic import simulate_match
-from train_models.models import load_model
-from game.player import Player
+
+from game.gui.board import Board
+from game.gui.menu import Menu
+from game.core.game_logic import simulate_match
+from game.core.player import  Player
+from model_training.models import load_model
 
 
-class Gui:
+class Game:
     def __init__(self) -> None:
         pygame.init()
         self.display_surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -19,22 +20,23 @@ class Gui:
         self.playing = False
         self.clock = pygame.time.Clock()
         self.dt = 0
-        self.game_screen = menu.Menu(self)
+        self.game_screen = Menu(self)
+
+        self.run()
 
     def switch_game_screen(self, game_screen) -> None:
         self.game_screen = game_screen
 
-        if isinstance(self.game_screen, board.Board):
+        if isinstance(self.game_screen, Board):
             self.playing = True
             self.start_game()
-        elif isinstance(self.game_screen, menu.Menu):
+        elif isinstance(self.game_screen, Menu):
             self.playing = False
 
     def start_game(self):
         init_seed = None
 
-        competitors = []
-        competitors.append(Player(is_human=True))
+        competitors = [Player(is_human=True)]
         for _ in range(3):
             filename = "b0_new"
             competitors.append(
@@ -63,4 +65,4 @@ class Gui:
             self.dt = self.clock.tick() / 1000
 
         pygame.quit()
-        exit()
+        sys.exit()

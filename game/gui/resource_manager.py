@@ -2,7 +2,7 @@ import pygame
 import os
 
 
-tile_img_path = os.path.join("resources", "img", "tiles")
+tile_img_path = os.path.join("game", "assets", "img", "tiles")
 tile_imgs = {}
 
 
@@ -20,7 +20,7 @@ def load_tile_image(tile_name):
 
 
 pygame.mixer.init()
-sounds_path = os.path.join("resources", "sounds")
+sounds_path = os.path.join("game", "assets", "sounds")
 sounds = {}
 
 

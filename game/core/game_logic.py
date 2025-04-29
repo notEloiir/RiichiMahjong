@@ -1,18 +1,18 @@
 import random
-from train_models.training_data_classes import InputFeatures
 import torch
-from game.player import Player
-from game.mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
-from game.tile import Tile
-from game.shanten import correct_shanten
 from time import sleep
 from sys import exit
-
 from mahjong import agari
 from mahjong.meld import Meld
 from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 import mahjong.constants as mc
+
+from data_engineering import InputFeatures
+from game.core.player import Player
+from game.core.mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
+from game.core.tile import Tile
+from game.core.shanten import correct_shanten
 
 
 def wind_from_int(wind_id):

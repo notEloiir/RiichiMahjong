@@ -1,27 +1,23 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
 import pygame
-import gui.settings as settings
-import gui.ui as ui
-import gui.menu as menu
-import gui.discard_pile as discard_pile
-import gui.hand as hand
-import gui.status_bar as status_bar
-import gui.tile_sprite as tile_sprite
-import gui.scores as scores
-from game.mahjong_enums import MoveType
-from gui.resource_manager import get_sound
 
-if TYPE_CHECKING:
-    from gui import Gui
-
+import game.gui.discard_pile as discard_pile
+import game.gui.hand as hand
+import game.gui.menu as menu
+import game.gui.resource_manager as resource_manager
+import game.gui.scores as scores
+import game.gui.settings as settings
+import game.gui.status_bar as status_bar
+import game.gui.tile_sprite as tile_sprite
+import game.gui.ui_items as ui_items
+from game.core.mahjong_enums import MoveType
 
 class Board:
-    def __init__(self, gui: Gui):
-        self.gui = gui
-        self.display_surface = self.gui.display_surface
+    def __init__(self, game):
+        self.game = game
+        self.display_surface = self.game.display_surface
         self.buffer_surface = pygame.Surface(self.display_surface.get_size())
-        self.width, self.height = self.gui.display_surface.get_size()
+        self.width, self.height = self.game.display_surface.get_size()
         self.game_state = None
         self.possible_moves = []
         self.chosen_move = None
@@ -31,7 +27,7 @@ class Board:
         center_offset = 0.1 * self.height / 2
         pile_spacing = 0.01 * self.height
 
-        self.prevalent_wind_label = ui.Label(
+        self.prevalent_wind_label = ui_items.Label(
             position=(
                 0.5 * self.width - center_offset,
                 0.5 * self.height - center_offset,
@@ -43,7 +39,7 @@ class Board:
             text="",
             align="center",
         )
-        self.tiles_count_label = ui.Label(
+        self.tiles_count_label = ui_items.Label(
             position=(
                 0.5 * self.width - center_offset,
                 0.5 * self.height,
@@ -56,7 +52,7 @@ class Board:
             align="center",
         )
 
-        self.dora_indicators_label = ui.Label(
+        self.dora_indicators_label = ui_items.Label(
             position=(0.27 * self.height, 0.25 * self.height),
             size=(0.3 * self.width, 0.05 * self.height),
             text="Dora indicators",
@@ -102,20 +98,20 @@ class Board:
             rotation=3,
         )
 
-        self.waiting_prompt = ui.Label(
+        self.waiting_prompt = ui_items.Label(
             position=(0.5 * self.width - 0.5 * 0.9 * self.height, 0.80 * self.height),
             size=(0.6 * self.width, 0.05 * self.height),
             text="...",
             align="left",
         )
 
-        self.discarding_prompt = ui.Label(
+        self.discarding_prompt = ui_items.Label(
             position=(0.5 * self.width - 0.5 * 0.9 * self.height, 0.80 * self.height),
             size=(0.5 * self.width, 0.05 * self.height),
             text="Choose tile to discard",
             align="left",
         )
-        self.discarding_button = ui.Button(
+        self.discarding_button = ui_items.Button(
             position=(
                 0.5 * self.width + 0.5 * 0.9 * self.height - 0.1 * self.width,
                 0.80 * self.height,
@@ -125,7 +121,7 @@ class Board:
             on_click=lambda: self.discard_tile(),
         )
 
-        self.decision_promt = ui.Label(
+        self.decision_prompt = ui_items.Label(
             position=(0.5 * self.width - 0.5 * 0.9 * self.height, 0.80 * self.height),
             size=(0.5 * self.width, 0.05 * self.height),
             text="Take action?",
@@ -133,19 +129,19 @@ class Board:
         )
         self.decision_buttons = []
 
-        self.bot_1_label = ui.Label(
+        self.bot_1_label = ui_items.Label(
             position=(self.width - 0.2 * self.height, 0.95 * self.height),
             size=(0.5 * self.width, 0.05 * self.height),
             rotation=1,
             text="Bot 1",
         )
-        self.bot_2_label = ui.Label(
+        self.bot_2_label = ui_items.Label(
             position=(0.5 * self.width + 0.5 * 0.9 * self.height, 0.2 * self.height),
             size=(0.5 * self.width, 0.05 * self.height),
             rotation=2,
             text="Bot 2",
         )
-        self.bot_3_label = ui.Label(
+        self.bot_3_label = ui_items.Label(
             position=(0.2 * self.height, 0.05 * self.height),
             size=(0.5 * self.width, 0.05 * self.height),
             rotation=3,
@@ -193,17 +189,17 @@ class Board:
             rotation=3,
         )
 
-        self.exit_pop_up = ui.YesOrNoPopUp(
+        self.exit_pop_up = ui_items.YesOrNoPopUp(
             position=(0.2 * self.width, 0.3 * self.height),
             size=(0.6 * self.width, 0.4 * self.height),
-            on_yes=lambda: self.gui.switch_game_screen(menu.Menu(self.gui)),
+            on_yes=lambda: self.game.switch_game_screen(menu.Menu(self.game)),
             on_no=lambda: self.exit_pop_up.toggle(),
             yes_text="YES",
             no_text="NO",
             pop_up_text="Exit to menu?",
         )
 
-        self.score_display = scores.Scores(self.gui, (self.width, self.height))
+        self.score_display = scores.Scores(self.game, (self.width, self.height))
 
     def update_state(
         self,
@@ -258,7 +254,7 @@ class Board:
         self.curr_player_id = curr_player_id
 
     def play_sound(self, sound_name):
-        get_sound(sound_name).play()
+        resource_manager.get_sound(sound_name).play()
 
     def switch_game_state(self, game_state, **kwargs):
         self.game_state = game_state
@@ -269,9 +265,9 @@ class Board:
             self.chosen_move = None
             self.player_hand.selected_tile = None
         elif self.game_state == "DECIDING":
-            self.decision_promt.text = "Take action?"
+            self.decision_prompt.text = "Take action?"
             if kwargs.get("target_tile"):
-                self.decision_promt.text += f" ({tile_sprite.TileSprite.get_tile_name(kwargs.get('target_tile').true_id())})"
+                self.decision_prompt.text += f" ({tile_sprite.TileSprite.get_tile_name(kwargs.get('target_tile').true_id())})"
             self.possible_moves = kwargs.get("possible_moves")
             self.chosen_move = None
             self.player_hand.selected_tile = None
@@ -289,7 +285,7 @@ class Board:
             )
             for move in self.possible_moves:
                 self.decision_buttons.append(
-                    ui.Button(
+                    ui_items.Button(
                         position=button_position,
                         size=button_size,
                         text=MoveType(move).name,
@@ -301,10 +297,10 @@ class Board:
                     button_position[1],
                 )
         elif self.game_state == "DECIDING_CHI":
-            self.decision_promt.text = "Which chi to meld?"
+            self.decision_prompt.text = "Which chi to meld?"
             target_tile = kwargs.get("target_tile")
             if target_tile:
-                self.decision_promt.text += f" ({tile_sprite.TileSprite.get_tile_name(target_tile.true_id())})"
+                self.decision_prompt.text += f" ({tile_sprite.TileSprite.get_tile_name(target_tile.true_id())})"
             self.possible_moves = kwargs.get("possible_moves")
             self.chosen_move = None
             self.player_hand.selected_tile = None
@@ -324,7 +320,7 @@ class Board:
                 tile_number = (target_tile.to_int()) % 9 + 1
                 button_text = " - ".join(sorted([str(tile_number), str(tile_number + move[0]), str(tile_number + move[1])]))
                 self.decision_buttons.append(
-                    ui.Button(
+                    ui_items.Button(
                         position=button_position,
                         size=button_size,
                         text=button_text,
@@ -474,7 +470,7 @@ class Board:
             self.discarding_prompt.draw(self.buffer_surface)
             self.discarding_button.draw(self.buffer_surface)
         elif self.game_state == "DECIDING" or self.game_state == "DECIDING_CHI":
-            self.decision_promt.draw(self.buffer_surface)
+            self.decision_prompt.draw(self.buffer_surface)
             for button in self.decision_buttons:
                 button.draw(self.buffer_surface)
 

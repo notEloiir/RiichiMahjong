@@ -4,7 +4,7 @@ SCREEN_HEIGHT = 720
 # SCREEN_HEIGHT = 480
 
 SYS_FONT_NAME = 'ariel'
-FONT_NAME = "resources/fonts/GOT.otf"
+FONT_NAME = "game/assets/fonts/GOT.otf"
 BIG_FONT_SIZE = 72
 
 PRIMARY_COLOR = "#5C4B51"

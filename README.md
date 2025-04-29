@@ -24,7 +24,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
    
 2. Install dependencies:
 - `cd RiichiMahjong`
-- if you have uv: `uv sync`
+- if you have uv: `uv sync --extra=cpu`
 - otherwise: `pip install -r requirements.txt`
 
 ### Data engineering:

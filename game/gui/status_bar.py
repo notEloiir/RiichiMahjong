@@ -1,5 +1,4 @@
-import pygame
-import gui.ui as ui
+import game.gui.ui_items as ui_items
 
 
 class StatusBar:
@@ -20,9 +19,11 @@ class StatusBar:
         elif self.rotation == 3:
             delta_x = 0
             delta_y = self.size[0] / 3
+        else:
+            raise ValueError("Invalid rotation")
 
 
-        self.wind_label = ui.Label(
+        self.wind_label = ui_items.Label(
             position=self.position,
             size=(
                 self.size[0] / 3,
@@ -31,7 +32,7 @@ class StatusBar:
             rotation=rotation,
             align="left"
         )
-        self.score_label = ui.Label(
+        self.score_label = ui_items.Label(
             position=(
                 self.position[0] + delta_x,
                 self.position[1] + delta_y,
@@ -42,7 +43,7 @@ class StatusBar:
                 self.size[1],
             ),
         )
-        self.special_label = ui.Label(
+        self.special_label = ui_items.Label(
             position=(
                 self.position[0] + 2 *delta_x,
                 self.position[1] + 2 * delta_y,

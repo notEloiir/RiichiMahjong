@@ -2,8 +2,9 @@ import gzip
 import xml.etree.ElementTree as ET
 from urllib.parse import unquote
 import re
-from game.mahjong_enums import MoveType
-from game.tile import Tile
+
+from game.core.tile import Tile
+from game.core.mahjong_enums import MoveType
 
 
 class MoveData:

@@ -1,8 +1,9 @@
-from game.mahjong_enums import MoveType
-from game.tile import Tile
-from train_models.training_data_classes import TrainingData, InputFeatures, Label
 from mahjong import shanten
-from train_models.parse_logs import MatchData, MoveData
+
+from data_engineering import InputFeatures, Label, TrainingData
+from data_engineering.parse_logs import MatchData, MoveData
+from game.core.tile import Tile
+from game.core.mahjong_enums import MoveType
 
 
 def count_tiles(tiles: list[Tile]):

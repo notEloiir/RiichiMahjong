@@ -1,5 +1,6 @@
 import pygame
-import gui.settings as settings
+
+import game.gui.settings as settings
 
 
 class UIItem:

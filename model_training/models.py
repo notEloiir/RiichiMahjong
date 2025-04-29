@@ -2,15 +2,12 @@ import os
 import time
 import traceback
 from xml.etree.ElementTree import ParseError
-from train_models.db_connect import get_match_log_data
-from train_models.parse_logs import parse_match_log
-from train_models.label_data import get_data_from_replay
-from train_models.training_data_classes import TrainingData
-
 import torch.nn as nn
 import torch.optim as optim
 import torch.cuda
 import torch.nn.functional as F
+
+from data_engineering import get_match_log_data, get_data_from_replay, parse_match_log, TrainingData
 
 
 class MahjongNN(nn.Module):
