@@ -3,8 +3,8 @@ import xml.etree.ElementTree as ET
 from urllib.parse import unquote
 import re
 
-from game.core.tile import Tile
-from game.core.mahjong_enums import MoveType
+from game.src.core.tile import Tile
+from game.src.core.mahjong_enums import MoveType
 
 
 class MoveData:

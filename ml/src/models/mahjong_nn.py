@@ -7,7 +7,7 @@ import torch.optim as optim
 import torch.cuda
 import torch.nn.functional as F
 
-from data_engineering import get_match_log_data, get_data_from_replay, parse_match_log, TrainingData
+from ml.src.data_processing import get_match_log_data, get_data_from_replay, parse_match_log, TrainingData
 
 
 class MahjongNN(nn.Module):
@@ -217,7 +217,7 @@ def save_model(model: MahjongNN, filename: str):
 
 
 def load_model(filename: str, device):
-    model_path = os.path.join(os.getcwd(), "models", filename)
+    model_path = os.path.join(os.getcwd(), "ml", "data", "models", filename)
     checkpoint = torch.load(model_path, map_location=device)
 
     num_layers = checkpoint['num_layers']

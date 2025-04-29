@@ -8,11 +8,11 @@ from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
 import mahjong.constants as mc
 
-from data_engineering import InputFeatures
-from game.core.player import Player
-from game.core.mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
-from game.core.tile import Tile
-from game.core.shanten import correct_shanten
+from ml.src.data_processing import InputFeatures
+from game.src.core.player import Player
+from game.src.core.mahjong_enums import EventType, RiichiStatus, FuritenStatus, MoveType
+from game.src.core.tile import Tile
+from game.src.core.shanten import correct_shanten
 
 
 def wind_from_int(wind_id):

@@ -1,4 +1,4 @@
-from .models import MahjongNN
+from .mahjong_nn import MahjongNN
 from .compare_models import versus
 
 __all__ = [

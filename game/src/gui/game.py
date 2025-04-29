@@ -3,11 +3,11 @@ import sys
 import torch
 import threading
 
-from game.gui.board import Board
-from game.gui.menu import Menu
-from game.core.game_logic import simulate_match
-from game.core.player import  Player
-from model_training.models import load_model
+from game.src.gui.board import Board
+from game.src.gui.menu import Menu
+from game.src.core.game_logic import simulate_match
+from game.src.core.player import  Player
+from ml.src.models.mahjong_nn import load_model
 
 
 class Game:

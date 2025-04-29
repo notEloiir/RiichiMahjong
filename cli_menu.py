@@ -1,9 +1,9 @@
 import torch
 import os
 
-from model_training import versus
-from model_training.models import get_device, initialize_model, train_model, save_model, load_model
-from game.core.player import Player
+from ml.src.models import versus
+from ml.src.models.mahjong_nn import get_device, initialize_model, train_model, save_model, load_model
+from game.src.core.player import Player
 
 
 if __name__ == "__main__":
@@ -40,7 +40,7 @@ quit
                 how_many = int(user_input[1])
                 starting_from = int(user_input[2])
                 batch_size = int(user_input[3])
-                filename = os.path.join("models", user_input[4])
+                filename = os.path.join("ml", "data", "models", user_input[4])
                 db_file = int(user_input[5])
                 train_model(model, how_many, starting_from, batch_size, device, filename, db_file)
 
@@ -48,7 +48,7 @@ quit
                 if len(user_input) != 2:
                     print("Expecting 1 argument for save, got {}.".format(len(user_input) - 1))
                     continue
-                filename = os.path.join("models", user_input[1])
+                filename = os.path.join("ml", "data", "models", user_input[1])
                 print("Saving model to ", filename)
                 save_model(model, filename)
 

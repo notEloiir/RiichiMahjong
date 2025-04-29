@@ -1,7 +1,7 @@
 import torch
 from random import randint
 
-from game.core.mahjong_enums import MoveType
+from game.src.core.mahjong_enums import MoveType
 
 
 def roll_list_backwards(lst, roll_by):

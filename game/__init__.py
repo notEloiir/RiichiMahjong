@@ -1,0 +1,1 @@
+from .src.gui.game import Game

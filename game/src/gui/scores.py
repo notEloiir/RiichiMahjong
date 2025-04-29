@@ -1,5 +1,5 @@
-import game.gui.ui_items as ui_items
-import game.gui.menu as menu
+import game.src.gui.ui_items as ui_items
+import game.src.gui.menu as menu
 
 
 class Scores:

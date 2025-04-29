@@ -1,6 +1,6 @@
 import pygame
 
-import game.gui.resource_manager as resource_manager
+import game.src.gui.resource_manager as resource_manager
 
 
 class TileSprite(pygame.sprite.Sprite):

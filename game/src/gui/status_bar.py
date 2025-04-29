@@ -1,4 +1,4 @@
-import game.gui.ui_items as ui_items
+import game.src.gui.ui_items as ui_items
 
 
 class StatusBar:

@@ -1,16 +1,16 @@
 from __future__ import annotations
 import pygame
 
-import game.gui.discard_pile as discard_pile
-import game.gui.hand as hand
-import game.gui.menu as menu
-import game.gui.resource_manager as resource_manager
-import game.gui.scores as scores
-import game.gui.settings as settings
-import game.gui.status_bar as status_bar
-import game.gui.tile_sprite as tile_sprite
-import game.gui.ui_items as ui_items
-from game.core.mahjong_enums import MoveType
+import game.src.gui.discard_pile as discard_pile
+import game.src.gui.hand as hand
+import game.src.gui.menu as menu
+import game.src.gui.resource_manager as resource_manager
+import game.src.gui.scores as scores
+import game.src.gui.settings as settings
+import game.src.gui.status_bar as status_bar
+import game.src.gui.tile_sprite as tile_sprite
+import game.src.gui.ui_items as ui_items
+from game.src.core.mahjong_enums import MoveType
 
 class Board:
     def __init__(self, game):

@@ -1,7 +1,7 @@
 import pygame
 
-import game.gui.ui_items as ui_items
-import game.gui.board as board
+import game.src.gui.ui_items as ui_items
+import game.src.gui.board as board
 
 
 class Menu:

@@ -1,4 +1,4 @@
-from .training_data_classes import InputFeatures, Label, TrainingData
+from ml.src.data_structures.training_data_classes import InputFeatures, Label, TrainingData
 from .db_connect import get_match_log_data
 from .label_data import get_data_from_replay
 from .parse_logs import parse_match_log
