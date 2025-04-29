@@ -1,1 +1,1 @@
-from .src.gui.game import Game
+from .src.gui.game_gui import GameGui

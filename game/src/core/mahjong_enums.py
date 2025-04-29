@@ -1,4 +1,5 @@
 from enum import Enum
+import mahjong.constants as mc
 
 
 class EventType(Enum):

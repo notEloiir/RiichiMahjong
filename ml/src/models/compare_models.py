@@ -1,7 +1,7 @@
 import random
 from operator import add
 
-from game.src.core.game_logic import simulate_match
+from game.src.core.match import run_match
 
 
 def versus(competitors, how_many, init_seed, device):
@@ -12,7 +12,7 @@ def versus(competitors, how_many, init_seed, device):
         match_total = [0, 0, 0, 0]
         print("Match {} seed {}".format(match, seed))
         for order in range(4):
-            scores = simulate_match(competitors[order:] + competitors[:order], seed, device)
+            scores, _ = run_match(competitors[order:] + competitors[:order], seed, device)
             scores = scores[-order:] + scores[:-order]
             match_total = list(map(add, match_total, scores))
             print("Match {} var {} completed with scores {}".format(match, order, scores))

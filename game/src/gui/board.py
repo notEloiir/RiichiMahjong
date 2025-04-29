@@ -289,7 +289,7 @@ class Board:
                         position=button_position,
                         size=button_size,
                         text=MoveType(move).name,
-                        on_click=lambda move=move: self.make_decision(move),
+                        on_click=lambda x=move: self.make_decision(x),
                     )
                 )
                 button_position = (

@@ -7,15 +7,18 @@ import torch.optim as optim
 import torch.cuda
 import torch.nn.functional as F
 
-from ml.src.data_processing import get_match_log_data, get_data_from_replay, parse_match_log, TrainingData
+from game.src.core.match import run_match
+from game.src.core.player import Player
+from ml.src.data_processing import get_match_log_data, parse_match_log
+from ml.src.data_structures import DataPoint
 
 
 class MahjongNN(nn.Module):
     def __init__(self, num_layers, hidden_size, device):
         super(MahjongNN, self).__init__()
-        self.input_size = 459
+        self.input_size = DataPoint.input_size
         self.hidden_size = hidden_size
-        self.output_size = 76
+        self.output_size = DataPoint.label_size
         self.lr = 0.01
 
         self.num_layers = num_layers
@@ -26,7 +29,7 @@ class MahjongNN(nn.Module):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
             self.layers.append(nn.ReLU())
         self.layers.append(nn.Linear(hidden_size, self.output_size))
-        # sigmoid in is get_prediction() for usage, for training it's in BCEWithLogitsLoss
+        # sigmoid in is get_prediction() for inference, for training it's in BCEWithLogitsLoss
 
         self.optimizer = optim.Adam(self.parameters(), lr=self.lr)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=150, factor=0.5, min_lr=1e-5)
@@ -46,7 +49,7 @@ class MahjongNN(nn.Module):
         # discard_tiles, call_tiles, action
         return torch.split(F.sigmoid(out), [34, 34, 8])
 
-    def train_on_replay(self, data: list[TrainingData], epochs_no=10):
+    def train_on_replay(self, data, epochs_no=10):
 
         inputs = torch.cat([action.inputs.tensor.unsqueeze(0) for action in data], dim=0)
         labels = torch.cat([action.label.tensor.unsqueeze(0) for action in data], dim=0)
@@ -131,6 +134,7 @@ def get_data_from_replay_threaded(match_logs, device, thread_no=4):
 
 def train_model(model, how_many, starting_from, batch_size, device, filename, db_file):
     print("train_model(): start")
+    seed = 42
 
     print("Connecting to DB...")
     curr_dir = os.getcwd()
@@ -157,8 +161,11 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
 
         start = time.time()
         try:
-            training_data = get_data_from_replay(
-                [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], device)
+            _, training_data = run_match(
+                [Player() for _ in range(4)], seed, device,
+                match_replay=[parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)],
+                collect_data=True
+            )
             """
             training_data = get_data_from_replay_threaded(
                      [parse_match_log(match_log[0]) for match_log in cursor.fetchmany(batch_size)], torch.device('cpu'),

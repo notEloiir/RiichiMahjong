@@ -1,5 +1,5 @@
-from game import Game
+from game import GameGui
 
 
 if __name__ == "__main__":
-    game = Game()
+    game = GameGui()

@@ -5,12 +5,12 @@ import threading
 
 from game.src.gui.board import Board
 from game.src.gui.menu import Menu
-from game.src.core.game_logic import simulate_match
+from game.src.core.match import run_match
 from game.src.core.player import  Player
 from ml.src.models.mahjong_nn import load_model
 
 
-class Game:
+class GameGui:
     def __init__(self) -> None:
         pygame.init()
         self.display_surface = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -44,7 +44,7 @@ class Game:
             )
 
         game = threading.Thread(
-            target=simulate_match,
+            target=run_match,
             args=(competitors, init_seed, torch.device("cpu"), self),
             daemon=True,
         )
