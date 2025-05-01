@@ -15,7 +15,7 @@ class Hand:
         self.hidden = hidden
 
     def update_tiles(self, closed_tiles, melds):
-        closed_tiles_sorted = sorted(closed_tiles, key=lambda tile: tile.true_id())
+        closed_tiles_sorted = sorted(closed_tiles, key=lambda tile: tile.id136())
 
         spacing = 3
         tile_width = (self.size[0] - 18 * spacing) / 19
@@ -85,10 +85,24 @@ class PlayerHand(Hand):
     def __init__(self, position, size, rotation=0):
         super().__init__(position, size, rotation, False)
         self.selected_tile = None
+        self.restricted = []
+
+    def restrict_tiles(self, can_select_tiles: list[int]):
+        for tile_spr in self.closed_tiles:
+            tile = tile_spr.tile
+
+            if not can_select_tiles[tile.id34()]:
+                self.restricted.append(tile)
+                tile_spr.inactive = True
+
+    def lift_restriction_tiles(self):
+        for tile_spr in self.restricted:
+            tile_spr.inactive = False
+        self.restricted.clear()
 
     def handle_click(self, mouse_pos):
         for tile in self.closed_tiles:
-            if tile.rect.collidepoint(mouse_pos):
+            if tile.rect.collidepoint(mouse_pos) and tile not in self.restricted:
                 self.selected_tile = tile
 
     def draw(self, display_surface):

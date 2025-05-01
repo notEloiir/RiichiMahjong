@@ -47,7 +47,7 @@ class MahjongNN(nn.Module):
         out = self(input_vector.unsqueeze(0))[0]
 
         # discard_tiles, call_tiles, action
-        return torch.split(F.sigmoid(out), [34, 34, 8])
+        return torch.split(F.sigmoid(out), DataPoint.label_split)
 
     def train_on_replay(self, data, epochs_no=10):
 

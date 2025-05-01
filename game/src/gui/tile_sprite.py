@@ -11,10 +11,11 @@ class TileSprite(pygame.sprite.Sprite):
         self.rotation = rotation
         self.hidden = hidden
         self.tile = tile
-        self.tile_id = tile.true_id()
+        self.tile_id = tile.id136()
         self.tile_name = self.get_tile_name(self.tile_id)
         self.image = self.__get_tile_img()
         self.rect = self.image.get_rect(center=self.position)
+        self.inactive = False
 
     @staticmethod
     def get_tile_name(tile_id):
@@ -39,5 +40,9 @@ class TileSprite(pygame.sprite.Sprite):
         return rotated_img
 
     def draw(self, display_surface):
+        self.image.set_alpha(255)
+        if self.inactive:
+            self.image.set_alpha(128)
+
         display_surface.blit(self.image, self.position)
         

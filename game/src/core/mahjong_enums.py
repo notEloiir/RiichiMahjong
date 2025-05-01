@@ -1,16 +1,14 @@
 from enum import Enum
-import mahjong.constants as mc
 
 
 class EventType(Enum):
     DRAW_TILE = 0
-    DRAW_TILE_AFTER_KAN = 1
-    DISCARD_TILE = 2
-    TILE_DISCARDED = 3
-    ROUND_DRAW = 4
-    WALL_EXHAUSTED = 5
-    WINNER = 6
-    AFTER_KAN = 7
+    DISCARD_TILE = 1
+    TILE_DISCARDED = 2
+    ROUND_DRAW = 3
+    WALL_EXHAUSTED = 4
+    WINNER = 5
+    AFTER_KAN = 6
 
 
 class RiichiStatus(Enum):
@@ -22,13 +20,12 @@ class RiichiStatus(Enum):
 
 class FuritenStatus(Enum):
     DEFAULT = 0
-    TEMP_FURITEN = 1
-    DISCARD_FURITEN = 2
-    PERM_FURITEN = 3
+    TEMP_FURITEN = 1  # logically the same as discard furiten
+    PERM_FURITEN = 2
 
 
 class MoveType(Enum):
-    DRAW = 0
+    PASS = 0
     DISCARD = 1
     CHI = 2
     PON = 3
@@ -36,7 +33,8 @@ class MoveType(Enum):
     RON = 5
     TSUMO = 6
     KAN = 7
-    PASS = 8
+    DRAW = 8
+    ABORT = 9
 
     def __str__(self):
         return self.name

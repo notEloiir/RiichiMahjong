@@ -7,22 +7,25 @@ class Tile:
         wd gd rd
     """
 
-    def __init__(self, tile_id):
-        self.id = tile_id
+    def __init__(self, tile_id136):
+        self.id136 = tile_id136
 
-    def true_id(self):
-        return self.id
+    def id136(self):
+        return self.id136
 
-    def to_int(self):
-        return self.id // 4
+    def id34(self):
+        return self.id136 // 4
 
     def is_red5(self):
-        return self.to_int() < 27 and self.to_int() % 9 == 4 and self.id % 4 == 0
+        return self.id34() < 27 and self.id34() % 9 == 4 and self.id136 % 4 == 0
 
     def __str__(self):
-        return Tile.TILES.split()[self.id // 4]
+        return Tile.TILES.split()[self.id136 // 4]
 
     def __eq__(self, other):
         if type(other) != Tile:
             return False
-        return self.id == other.id
+        return self.id136 == other.id136
+
+    def __hash__(self):
+        return hash(self.id136)

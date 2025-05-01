@@ -1,21 +1,29 @@
 import numpy as np
 
+from game.src.core.mahjong_enums import MoveType
+
 
 def roll_list_backwards(lst, roll_by):
     if lst is None:
         return None
     return lst[roll_by:] + lst[:roll_by]
 
+
 def flatten_list(lst):
     return [elem for sublist in lst for elem in sublist]
 
+
 class DataPoint:
-    _data: np.ndarray[float]
     input_size = 459
-    label_size = 76
+    label_split = (34, 34, len(MoveType))
+    label_size = sum(label_split)
+
+    features: np.ndarray
+    labels: np.ndarray
 
     def __init__(self):
-        _data = np.zeros(self.input_size + self.label_size, dtype=np.float32)
+        self.features = np.empty(0, dtype=np.float32)
+        self.labels = np.empty(0, dtype=np.float32)
 
     def load_input(self, seat, round_no, turn_no, dealer, prevalent_wind, seat_wind,
                    closed_hand_counts, open_hand_counts, discard_pile_orders,
@@ -49,13 +57,14 @@ class DataPoint:
         discard_pile_orders = flatten_list(discard_pile_orders)
         red5_open_hand = flatten_list(red5_open_hand)
 
-        self._data[:self.input_size] = np.array(
-            [round_no] + [turn_no] + dealer_arr + prev_wind_arr + seat_wind_arr +
+        self.features = np.array(
+            ([round_no] + [turn_no] + dealer_arr + prev_wind_arr + seat_wind_arr +
             closed_hand_counts + open_hand_counts + discard_pile_orders +
             hidden_tile_counts + dora_indicator_counts + hand_is_closed + hand_in_riichi +
             scores + red5_closed_hand + red5_open_hand + red5_discarded +
-            red5_hidden + tile_to_call_arr + tile_origin_arr
-        ).astype(np.float32)
+            red5_hidden + tile_to_call_arr + tile_origin_arr),
+            dtype=np.float32
+        )
 
     def load_labels(self, discard_tile, call_tile, action):
-        self._data[self.input_size:] = np.array((discard_tile + call_tile + action), dtype=np.float32)
+        self.labels = np.array((discard_tile + call_tile + action), dtype=np.float32)

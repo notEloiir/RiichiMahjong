@@ -201,6 +201,12 @@ class Board:
 
         self.score_display = scores.Scores(self.game, (self.width, self.height))
 
+    def restrict_tiles(self, can_select_tiles: list[int]):
+        self.player_hand.restrict_tiles(can_select_tiles)
+
+    def lift_restriction_tiles(self):
+        self.player_hand.lift_restriction_tiles()
+
     def update_state(
         self,
         prevalent_wind,

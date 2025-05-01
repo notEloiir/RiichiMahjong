@@ -1,7 +1,7 @@
 import random
 import mahjong.constants as mc
 
-from game.src.core.round import Round
+from game.src.core.round import Round, ReplayRound
 from ml.src.data_structures import DataPoint
 
 
@@ -21,16 +21,17 @@ def run_match(competitors, seed, device, match_type=mc.EAST, gui=None, match_rep
     if collect_data and match_replay is None:
         raise NotImplementedError("Collecting data not on replay isn't implemented")
 
-
     while not (
         min(scores) <= 0 or
         (non_repeat_round_no >= 3 and max(scores) >= 500) or
         round_no >= 12
     ):
-        round_replay = match_replay[round_no] if match_replay is not None else None
-
-        scores, dealer_won, data = Round(competitors, scores, non_repeat_round_no, match_type,
-                                         device, gui, round_replay=round_replay, collect_data=collect_data)
+        if match_replay is None:
+            rnd = Round(competitors, scores, non_repeat_round_no, match_type, device, gui)
+        else:
+            rnd = ReplayRound(competitors, scores, non_repeat_round_no, match_type,
+                              device, match_replay[round_no], collect_data, gui)
+        scores, dealer_won, data = rnd.run()
 
         if collect_data:
             collected_data.extend(data)
