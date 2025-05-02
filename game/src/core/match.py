@@ -1,7 +1,8 @@
 import random
 import mahjong.constants as mc
 
-from game.src.core.round import Round, ReplayRound
+from game.src.core.round import Round
+from game.src.core.replay_round import ReplayRound
 from ml.src.data_structures import DataPoint
 
 

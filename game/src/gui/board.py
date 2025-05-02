@@ -272,7 +272,7 @@ class Board:
             self.player_hand.selected_tile = None
         elif self.game_state == "DECIDING":
             self.decision_prompt.text = "Take action?"
-            if kwargs.get("target_tile"):
+            if kwargs.get("target_tile") and kwargs.get("target_tile") is not None:
                 self.decision_prompt.text += f" ({tile_sprite.TileSprite.get_tile_name(kwargs.get('target_tile').true_id())})"
             self.possible_moves = kwargs.get("possible_moves")
             self.chosen_move = None

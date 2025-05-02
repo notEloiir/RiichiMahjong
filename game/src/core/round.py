@@ -187,20 +187,21 @@ class Round:
                not self.hand_in_riichi[self.curr_player_id] and \
                self.scores[self.curr_player_id] > 10
 
-    def get_hand_result(self):
+    def get_hand_result(self, config=None):
+        if config is None:
+            config = HandConfig(
+                is_tsumo=True,
+                is_riichi=self.hand_in_riichi[self.curr_player_id],
+                player_wind=wind_from_int(self.seat_wind[self.curr_player_id]),
+                round_wind=wind_from_int(self.prevalent_wind)
+            )
         tiles136 = [
             t.id136()
             for t in self.closed_hands[self.curr_player_id] + self.open_hands[self.curr_player_id]
         ]
         win_tile136 = self.closed_hands[self.curr_player_id][-1].id136()
         hand_result = self.hand_calculator.estimate_hand_value(
-            tiles=tiles136, win_tile=win_tile136, melds=self.melds[self.curr_player_id],
-            config=HandConfig(
-                is_tsumo=True,
-                is_riichi=self.hand_in_riichi[self.curr_player_id],
-                player_wind=wind_from_int(self.seat_wind[self.curr_player_id]),
-                round_wind=wind_from_int(self.prevalent_wind)
-            )
+            tiles=tiles136, win_tile=win_tile136, melds=self.melds[self.curr_player_id], config=config
         )
         return hand_result
 
@@ -395,15 +396,15 @@ class Round:
     def play_tsumo(self):
         self.event = Event(EventType.WINNER, self.curr_player_id, [self.curr_player_id])
 
-    def decide(self, possible_calls: list[MoveType]):
+    def decide(self, possible_calls: list[MoveType], target_tile=None):
         if self.competitors[self.curr_player_id].is_human:
-            take_action = self.query_human(possible_calls)
+            take_action = self.query_human(possible_calls, target_tile)
             return None, None, take_action
         else:
             return self.query_model(possible_calls)
 
-    def query_human(self, possible_calls: list[MoveType]):
-        self.board.switch_game_state("DECIDING", possible_moves=possible_calls)
+    def query_human(self, possible_calls: list[MoveType], target_tile=None):
+        self.board.switch_game_state("DECIDING", possible_moves=possible_calls, target_tile=target_tile)
         while not self.board.input_ready:
             if not self.gui.playing:
                 exit()
@@ -817,27 +818,19 @@ class Round:
         self.finished = True
 
     def handle_after_kan(self):
-        tile = self.kan_tile
+        self.tile = self.kan_tile
         self.curr_player_id = self.event.who
         # from_who = self.event.from_who
 
-        is_ron_possible = [False] * 4
+        is_ron_possible = [[False] * 4]
         for p in range(4):
-            if p == curr_player_id:
+            if p == self.event.who:
                 continue
-            if furiten_status[p] == FuritenStatus.DEFAULT and agari.Agari().is_agari(
-                    [closed_hand_counts[p][i] + open_hand_counts[p][i] + int(tile.id34() == i)
-                     for i in range(34)], self.open_melds_tile_id34s()):
-                tiles136 = [t.id136() for t in closed_hands[p] + open_hands[p]] + [tile.id136()]
-                win_tile136 = tile.id136()
-                hand_result = hand_calculator.estimate_hand_value(
-                    tiles=tiles136, win_tile=win_tile136, melds=melds[p], config=HandConfig(
-                        is_riichi=hand_in_riichi[p], player_wind=wind_from_int(seat_wind[p]),
-                        round_wind=wind_from_int(non_repeat_round_no)
-                    ))
-                is_ron_possible[p] = hand_result.error is None and \
-                                     (self.open_kan or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
-                # robbing a kan works only on added kan, or closed kan + thirteen orphans
+            self.curr_player_id = p
+            hand_result = self.get_hand_result()
+            is_ron_possible[p] = hand_result.error is None and \
+                                 (self.open_kan or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
+            # robbing a kan works only on added kan, or closed kan + thirteen orphans
 
         self.event = Event(EventType.DRAW_TILE, self.curr_player_id)
         if not any(is_ron_possible):
@@ -845,45 +838,30 @@ class Round:
 
         wants = [MoveType.PASS for _ in range(4)]
         for p in range(4):
-            if p == curr_player_id:
+            if p == self.event.who:
                 continue
+            self.curr_player_id = p
 
-            if competitors[p].is_human and is_ron_possible[p]:
-                board.switch_game_state("DECIDING", possible_moves=[MoveType.PASS, MoveType.RON], target_tile=tile)
-                while not board.input_ready:
-                    if not gui.playing:
-                        exit()
-                    pass
-                wants[p] = board.chosen_move
-                board.switch_game_state("WAITING")
-                # wants[p] = MoveType.PASS
-            elif not competitors[p].is_human and is_ron_possible[p]:
-                # prepare the rest of input tensor
-                inputs = InputFeatures.from_args(
-                    device, p, non_repeat_round_no, turn_no, dealer_id, prevalent_wind, seat_wind[p],
-                    closed_hand_counts[p], open_hand_counts, discard_orders, hidden_tile_counts[p],
-                    visible_dora, hand_is_closed, hand_in_riichi, scores, red5_closed_hand[p], red5_open_hand,
-                    red5_discarded, red5_hidden[p])
-
-                # query the model
-                discard_tiles, call_tiles, action = competitors[p].model.get_prediction(inputs.tensor)
-
-                # decide what to do
-                wants[p] = MoveType.RON if action[4] > action[7] else MoveType.PASS
+            possible_calls = [MoveType.PASS, MoveType.RON]
+            wants[p] = self.decide(possible_calls, target_tile=self.tile)
 
         # update hand status trackers
         for p in range(4):
             if is_ron_possible[p] and wants[p] != MoveType.RON:
-                furiten_status[p] = FuritenStatus.PERM_FURITEN if hand_in_riichi[p] \
+                self.furiten_status[p] = FuritenStatus.PERM_FURITEN if self.hand_in_riichi[p] \
                     else FuritenStatus.TEMP_FURITEN
 
         if MoveType.RON in wants:
             for p in range(4):
                 if wants[p] == MoveType.RON:
-                    closed_hands[p].append(tile)
-                    closed_hand_counts[p][tile.id34()] += 1
+                    self.closed_hands[p].append(self.tile)
+                    self.closed_hand_counts[p][self.tile.id34()] += 1
 
-            event = Event(EventType.WINNER, [curr_player_id, [p for p in range(4) if wants[p] == MoveType.RON]])
+            self.event = Event(
+                EventType.WINNER,
+                who=[p for p in range(4) if wants[p] == MoveType.RON],
+                from_who=self.curr_player_id
+            )
 
     def handle_wall_exhausted(self):
         # check nagashi mangan yaku conditions
@@ -897,23 +875,23 @@ class Round:
 
         has_tenpai = [0] * 4  # ready hand
         for p in range(4):
-            has_tenpai[p] = int(correct_shanten([closed_hand_counts[p][i] +
-                                                 open_hand_counts[p][i] for i in range(34)], melds[p]) <= 0)
+            has_tenpai[p] = int(correct_shanten([self.closed_hand_counts[p][i] +
+                                                 self.open_hand_counts[p][i] for i in range(34)], self.melds[p]) <= 0)
         match sum(has_tenpai):
             case 3:
                 for p in range(4):
-                    scores[p] += 10 if has_tenpai[p] else -30
+                    self.scores[p] += 10 if has_tenpai[p] else -30
             case 2:
                 for p in range(4):
-                    scores[p] += 15 if has_tenpai[p] else -15
+                    self.scores[p] += 15 if has_tenpai[p] else -15
             case 1:
                 for p in range(4):
-                    scores[p] += 30 if has_tenpai[p] else -10
+                    self.scores[p] += 30 if has_tenpai[p] else -10
 
-        if board:
-            board.show_scores(scores, [0] * 4, "Wall exhausted")
-            while not board.score_display.ready_to_continue:
-                if not gui.playing:
+        if self.board:
+            self.board.show_scores(self.scores, [0] * 4, "Wall exhausted")
+            while not self.board.score_display.ready_to_continue:
+                if not self.gui.playing:
                     exit()
 
         self.dealer_won = has_tenpai[self.dealer_id]
@@ -927,31 +905,33 @@ class Round:
         yaku_text = ""
 
         for p in winners:
+            self.curr_player_id = p
+
             # possible
             is_tsumo = (dealt_in in winners)
-            is_riichi = bool(hand_in_riichi[p])
-            is_ippatsu = ippatsu[p]
-            is_rinshan = after_a_kan
-            is_chankan = stolen_kan
-            is_haitei = is_tsumo and turn_no == 70
-            is_houtei = not is_tsumo and turn_no == 70
-            is_daburu_riichi = double_riichi[p]
+            is_riichi = bool(self.hand_in_riichi[p])
+            is_ippatsu = self.ippatsu[p]
+            is_rinshan = self.after_a_kan
+            is_chankan = self.stolen_kan
+            is_haitei = is_tsumo and self.turn_no == 70
+            is_houtei = not is_tsumo and self.turn_no == 70
+            is_daburu_riichi = self.double_riichi[p]
 
             # pretty much impossible
-            is_nagashi_mangan = nagashi_mangan[p]  # 🗿 https://riichi.wiki/Nagashi_mangan
-            is_tenhou = is_tsumo and turn_no == 1  # win on first draw (dealer)
+            is_nagashi_mangan = self.nagashi_mangan[p]  # 🗿 https://riichi.wiki/Nagashi_mangan
+            is_tenhou = is_tsumo and self.turn_no == 1  # win on first draw (dealer)
             # ron on starting hand (no draws) as a first call of the round
-            is_renhou = not is_tsumo and first_move[p] and all(not m for m in melds)
+            is_renhou = not is_tsumo and self.first_move[p] and all(not m for m in self.melds)
             # win on first draw, before any call (not dealer)
-            is_chiihou = is_tsumo and turn_no > 1 and first_move[p]
+            is_chiihou = is_tsumo and self.turn_no > 1 and self.first_move[p]
             is_open_riichi = False  # this rule variation doesn't use open riichi yaku
             is_paarenchan = False  # this rule variation doesn't use parenchan yaku
 
             # other info
-            player_wind = wind_from_int(seat_wind[p])
-            round_wind = wind_from_int(non_repeat_round_no)
+            player_wind = wind_from_int(self.seat_wind[p])
+            round_wind = wind_from_int(self.prevalent_wind)
             # riichi sticks (no of bets placed)
-            kyoutaku_number = sum(rs == RiichiStatus.RIICHI for rs in riichi_status)
+            kyoutaku_number = sum(rs == RiichiStatus.RIICHI for rs in self.riichi_status)
             tsumi_number = 0  # penalty sticks
             options = OptionalRules(has_aka_dora=True)
 
@@ -960,13 +940,7 @@ class Round:
                                 is_chiihou, is_open_riichi, player_wind, round_wind, kyoutaku_number,
                                 tsumi_number, is_paarenchan, options)
 
-            tiles136 = [t.id136() for t in closed_hands[p] + open_hands[p]]
-            win_tile136 = closed_hands[p][-1].id136()
-            dora_indicators136 = [t.id136() for t in dora_indicators[:dora_revealed_no]] + \
-                                 [t.id136() for t in uradora_indicators[:dora_revealed_no]]
-            hand_result = hand_calculator.estimate_hand_value(tiles=tiles136, win_tile=win_tile136,
-                                                                melds=melds[p], config=config,
-                                                                dora_indicators=dora_indicators136)
+            hand_result = self.get_hand_result(config=config)
 
             # show result
             # TODO: also show fu and han
@@ -992,24 +966,24 @@ class Round:
             for p in range(4):
                 if p in winners:
                     continue
-                if dealer_id in winners:
+                if self.dealer_id in winners:
                     points_gained[p] = -total_plus // 3
-                elif dealer_id == p:
+                elif self.dealer_id == p:
                     points_gained[p] = -total_plus // 2
                 else:
                     points_gained[p] = -total_plus // 4
 
         for p in range(4):
-            scores[p] += points_gained[p]
+            self.scores[p] += points_gained[p]
 
-        if board:
-            board.show_scores(
-                scores,
+        if self.board:
+            self.board.show_scores(
+                self.scores,
                 points_gained,
                 yaku_text.rstrip("\n"),
             )
-            while not board.score_display.ready_to_continue:
-                if not gui.playing:
+            while not self.board.score_display.ready_to_continue:
+                if not self.gui.playing:
                     exit()
 
         self.dealer_won = self.dealer_id in winners
