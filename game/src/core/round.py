@@ -601,8 +601,7 @@ class Round:
         else:
             self.delay()
             # query the model what to discard
-            discard_tile, _, _ = \
-                self.query_model([MoveType.DISCARD])
+            discard_tile, _, _ = self.decide([MoveType.DISCARD])
 
         # Actually discard decided tile
         self.closed_hand_counts[self.curr_player_id][discard_tile.id34()] -= 1
@@ -843,7 +842,7 @@ class Round:
             self.curr_player_id = p
 
             possible_calls = [MoveType.PASS, MoveType.RON]
-            wants[p] = self.decide(possible_calls, target_tile=self.tile)
+            _, _, wants[p] = self.decide(possible_calls, target_tile=self.tile)
 
         # update hand status trackers
         for p in range(4):

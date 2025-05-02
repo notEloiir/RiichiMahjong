@@ -12,28 +12,27 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 
 ## Prerequisites
 - python  
-- uv (preferably)  
-- CUDA capable device (preferably, if training)
+- uv
+- (optional) CUDA capable device
 
 ## Installation
 
-### GUI only - just play the game
+### Game only
 
 1. Clone the repository:  
 - `git clone https://github.com/notEloiir/RiichiMahjong.git`
    
 2. Install dependencies:
 - `cd RiichiMahjong`
-- if you have uv: `uv sync --extra=cpu`
-- otherwise: `pip install -r requirements.txt`
+- `uv sync --extra=cpu`
 
-### Data engineering:
+### Data engineering
 
 3. Download match replays
-  1. Clone phoenix-logs repository into the project directory  
-    - `git clone https://github.com/ApplySci/phoenix-logs.git`  
-  2. Install phoenix-logs and download logs and their contents, phoenix-logs/README.md explains how
-    - https://github.com/ApplySci/phoenix-logs
+   1. Clone phoenix-logs repository into the project directory  
+   - `git clone https://github.com/ApplySci/phoenix-logs.git`  
+   2. Install phoenix-logs and download logs and their contents, phoenix-logs/README.md explains how
+   - https://github.com/ApplySci/phoenix-logs
 
 ### ML  
 
@@ -43,7 +42,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 
 ## Run
 
-### GUI
+### Game
 
 - `uv run main.py`
 
