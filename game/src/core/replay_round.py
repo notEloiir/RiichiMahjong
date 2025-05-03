@@ -6,43 +6,44 @@ from game.src.core.mahjong_enums import EventType, MoveType
 
 class ReplayRound(Round):
     def __init__(self, competitors: list[Player], scores, non_repeat_round_no, match_type,
-                 device, replay_rounds: RoundData, collect_data=True, gui=None):
+                 replay_rounds: RoundData, collect_data=True, gui=None):
         self.replay_rounds = replay_rounds
         self.collect_data = collect_data
         self.collected_data: list[DataPoint] = []
 
         self.move = replay_rounds.moves[0]
-        self.move_id = 0
+        self.move_id = -1
         self.dealer_id = replay_rounds.dealer
         self.scores = replay_rounds.score_before
-        """
-        self.uradora = []
-        self.score_before = [0] * 4
-        self.score_change = [0] * 4
-        self.init_hands: list[list[Tile]] = [[] for _ in range(4)]
-        """
 
-        for competitor in competitors:
-            competitor.is_human = False
-
-        super().__init__(competitors, scores, non_repeat_round_no, match_type, device, gui)
+        competitors = [Player(is_human=False) for _ in range(4)]
+        super().__init__(competitors, scores, non_repeat_round_no, match_type, gui)
 
         self.deciding_what: EventType = EventType.DRAW_TILE
 
     def prep_round(self):
         self.dora_indicators = [self.replay_rounds.initial_dora]
         self.uradora_indicators = self.replay_rounds.uradora
-        self.closed_hands = self.replay_rounds.init_hands
-        # TODO: reveal those tiles, update counts
+
+        self.reveal_dora()
+        for p in range(4):
+            self.curr_player_id = p
+            for tile in self.replay_rounds.init_hands[p]:
+                self.track_draw_tile(tile)
 
     def run(self):
         self.move_id += 1
         self.move = self.replay_rounds.moves[self.move_id]
+        super().run()
 
-        # TODO: handle what do, maybe instead of main loop based on events go with moves?
+    def track_draw_tile(self, tile=None):
+        if tile is None:
+            tile = self.move.tile
+        super().track_draw_tile(tile)
 
     def reveal_dora(self):
-        self.dora_indicators.append(self.move.dora_revealed_ind)
+        if self.move_id > 0:
+            self.dora_indicators.append(self.move.dora_revealed_ind)
         super().reveal_dora()
 
     def handle_draw_tile(self):
@@ -93,6 +94,7 @@ class ReplayRound(Round):
                 # output: call_tile, take_action
                 move = self.replay_rounds.moves[self.move_id + 1]
                 if move.move_type in (MoveType.CHI, MoveType.PON, MoveType.KAN, MoveType.RON):
+                    call_tile = move.tile
                     take_action = move.move_type
                     self.move_id += 1
                     self.move = move
@@ -109,6 +111,10 @@ class ReplayRound(Round):
                 else:
                     take_action = MoveType.PASS
 
-        self.collected_data[-1].load_labels(discard_tile, call_tile, take_action)
+        if self.collect_data:
+            datapoint = DataPoint()
+            self.load_input(datapoint, possible_calls)
+            datapoint.load_labels(discard_tile, call_tile, take_action)
+            self.collected_data.append(datapoint)
 
         return discard_tile, call_tile, take_action

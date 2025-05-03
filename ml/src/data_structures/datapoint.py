@@ -15,8 +15,33 @@ def flatten_list(lst):
 
 class DataPoint:
     input_size = 459
-    label_split = (34, 34, len(MoveType))
+    label_split = (34, 3, len(MoveType))
     label_size = sum(label_split)
+
+    feature_columns = \
+        ["round_no", "turn_no"] + \
+        [f"dealer_{p}" for p in range(4)] + \
+        [f"prevalent_wind_{p}" for p in range(4)] + \
+        [f"seat_wind_{p}" for p in range(4)] + \
+        [f"closed_hand_counts_{i}" for i in range(34)] + \
+        [f"open_hand_counts_{i // 34}_{i % 34}" for i in range(4 * 34)] + \
+        [f"discard_pile_orders_{i // 34}_{i % 34}" for i in range(4 * 34)] + \
+        [f"hidden_hand_counts_{i}" for i in range(34)] + \
+        [f"dora_indicator_counts_{i % 34}" for i in range(34)] + \
+        [f"hand_is_closed_{p}" for p in range(4)] + \
+        [f"hand_in_riichi_{p}" for p in range(4)] + \
+        [f"score_{p}" for p in range(4)] + \
+        [f"red5_closed_hand_{i}" for i in range(3)] + \
+        [f"red5_open_hand_{i // 3}_{i % 3}" for i in range(4 * 3)] + \
+        [f"red5_discarded_{i // 3}_{i % 3}" for i in range(4 * 3)] + \
+        [f"red5_hidden_{i}" for i in range(3)] + \
+        [f"tile_to_call_{i}" for i in range(34)] + \
+        [f"tile_origin_{p}" for p in range(4)]
+    label_columns = \
+        [f"discard_tile_{i}" for i in range(34)] + \
+        [f"which_chi_{i}" for i in range(3)] + \
+        [f"action_{i}" for i in range(len(MoveType))]
+    columns = feature_columns + label_columns
 
     features: np.ndarray
     labels: np.ndarray
@@ -66,5 +91,12 @@ class DataPoint:
             dtype=np.float32
         )
 
-    def load_labels(self, discard_tile, call_tile, action):
-        self.labels = np.array((discard_tile + call_tile + action), dtype=np.float32)
+    def load_labels(self, discard_tile, which_chi, action):
+        self.labels = np.zeros(self.label_size, dtype=np.float32)
+
+        if discard_tile is not None:
+            self.labels[discard_tile.id34()] = 1.
+        if which_chi is not None:
+            self.labels[self.label_split[0] + which_chi] = 1.
+        if action is not None:
+            self.labels[self.label_split[0] + self.label_split[1] + action.value] = 1.

@@ -1,4 +1,4 @@
-from game import GameGui
+from game.src.gui.game_gui import GameGui
 
 
 if __name__ == "__main__":

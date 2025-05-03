@@ -7,7 +7,7 @@ from ml.src.data_structures import DataPoint
 
 
 # For now, collect_data works only on replay
-def run_match(competitors, seed, device, match_type=mc.EAST, gui=None, match_replay=None, collect_data=False):
+def run_match(competitors, seed=0, match_type=mc.EAST, gui=None, match_replay=None, collect_data=False):
     # Initialize
     scores = [250, 250, 250, 250]
     if seed:
@@ -16,6 +16,8 @@ def run_match(competitors, seed, device, match_type=mc.EAST, gui=None, match_rep
     round_no = 0
     collected_data: list[DataPoint] = []
 
+    if match_replay is not None:
+        match_type = match_replay.prevalent_wind
     wind_offset = mc.EAST  # mahjong.constants WINDS are offset by 27 == mc.EAST
     match_type -= wind_offset  # 0
 
@@ -28,10 +30,10 @@ def run_match(competitors, seed, device, match_type=mc.EAST, gui=None, match_rep
         round_no >= 12
     ):
         if match_replay is None:
-            rnd = Round(competitors, scores, non_repeat_round_no, match_type, device, gui)
+            rnd = Round(competitors, scores, non_repeat_round_no, match_type, gui)
         else:
             rnd = ReplayRound(competitors, scores, non_repeat_round_no, match_type,
-                              device, match_replay[round_no], collect_data, gui)
+                              match_replay.round_data[round_no], collect_data, gui)
         scores, dealer_won, data = rnd.run()
 
         if collect_data:

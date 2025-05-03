@@ -7,9 +7,6 @@ import torch.optim as optim
 import torch.cuda
 import torch.nn.functional as F
 
-from game.src.core.match import run_match
-from game.src.core.player import Player
-from ml.src.data_processing import get_match_log_data, parse_match_log
 from ml.src.data_structures import DataPoint
 
 
@@ -132,7 +129,9 @@ def get_data_from_replay_threaded(match_logs, device, thread_no=4):
 """
 
 
-def train_model(model, how_many, starting_from, batch_size, device, filename, db_file):
+def train_model(model, batch_size, device, filename, db_file):
+    raise NotImplementedError("Should use data file like parquet, not raw from db")
+
     print("train_model(): start")
     seed = 42
 
@@ -142,17 +141,9 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
     cursor, match_no = get_match_log_data(logs_db_dir, db_file)
     print("Total number of matches available: ", match_no)
 
-    if starting_from + how_many > match_no:
-        print("Not enough matches in DB, download more first")
-        return
-
-    print("Skipping to starting point...")
-    for _ in range(starting_from // batch_size):
-        cursor.fetchmany(batch_size)
-
     print("Starting training...")
     start_time = time.time()
-    n = how_many // batch_size
+    n = match_no // batch_size
     for batch in range(n):
 
         # save checkpoint every 100 batches
@@ -212,7 +203,7 @@ def train_model(model, how_many, starting_from, batch_size, device, filename, db
 
 
 def save_model(model: MahjongNN, filename: str):
-    model_path = os.path.join(os.getcwd(), "models", filename)
+    model_path = os.path.join(os.getcwd(), "ml", "data", "models", filename)
     torch.save({
         'num_layers': model.num_layers,
         'hidden_size': model.hidden_size,

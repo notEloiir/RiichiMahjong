@@ -44,11 +44,10 @@ class Event:
 
 # Main game logic
 class Round:
-    def __init__(self, competitors: list[Player], scores, non_repeat_round_no, match_type, device, gui=None):
+    def __init__(self, competitors: list[Player], scores, non_repeat_round_no, match_type, gui=None):
         self.hand_calculator = HandCalculator()
         self.competitors = competitors
         self.scores = scores
-        self.device = device
         self.gui = gui
         self.board = None
 
@@ -116,13 +115,10 @@ class Round:
 
         # give out tiles to players
         for p in range(4):
+            self.curr_player_id = p
             for i in range(13):
                 tile = game_tiles[p * 13 + i]
-                self.closed_hands[p].append(tile)
-                self.closed_hand_counts[p][tile.id34()] += 1
-                if tile.is_red5():
-                    self.red5_hidden[p][tile.id34() // 9] = 0
-                    self.red5_closed_hand[p][tile.id34() // 9] = 1
+                self.track_draw_tile(tile)
 
         # build walls
         self.wall = game_tiles[52:122]  # from 13*4, 70 tiles
@@ -164,6 +160,48 @@ class Round:
     def delay(self, t=0.5):
         if self.board and not self.competitors[self.curr_player_id].is_human:
             sleep(t)
+
+    def track_draw_tile(self, tile=None):
+        if tile is None and not self.after_a_kan:
+            if self.turn_no == 70:
+                self.event = Event(EventType.WALL_EXHAUSTED)
+                return
+            self.turn_no += 1
+            self.tile = self.wall[self.turn_no - 1]
+        elif tile is None:
+            self.tile = self.dead_wall[self.dora_revealed_no - 1]
+            if self.dora_revealed_no == 5 and sum(
+                    self.open_hand_counts[self.curr_player_id]) != 16:  # 4 kans by >1 player
+                self.four_quads_draw_flag = True
+        else:
+            self.tile = tile
+
+        self.closed_hand_counts[self.curr_player_id][self.tile.id34()] += 1
+        self.closed_hands[self.curr_player_id].append(self.tile)
+        self.hidden_tile_counts[self.curr_player_id][self.tile.id34()] -= 1
+        if self.tile.is_red5():
+            self.red5_closed_hand[self.curr_player_id][self.tile.id34() // 9] = 1
+            self.red5_hidden[self.curr_player_id][self.tile.id34() // 9] = 0
+
+    def track_steal_tile(self, tile, from_who):
+        self.open_hands[self.curr_player_id].append(self.discard_piles[from_who].pop())
+        self.open_hand_counts[self.curr_player_id][tile.id34()] += 1
+        if tile.is_red5():
+            self.red5_discarded[tile.id34() // 9] = 0
+            self.red5_open_hand[self.curr_player_id][tile.id34() // 9] = 1
+
+    def track_open_tile(self, tile):
+        self.open_hands[self.curr_player_id].append(tile)
+        self.open_hand_counts[self.curr_player_id][tile.id34()] += 1
+        self.closed_hands[self.curr_player_id].remove(tile)
+        self.closed_hand_counts[self.curr_player_id][tile.id34()] -= 1
+        if tile.is_red5():
+            self.red5_closed_hand[self.curr_player_id][tile.id34() // 9] = 0
+            self.red5_open_hand[self.curr_player_id][tile.id34() // 9] = 1
+        for p in range(4):
+            if self.curr_player_id == p:
+                continue
+            self.hidden_tile_counts[p][tile.id34()] -= 1
 
     def open_melds_tile_id34s(self):
         return [t // 4 for m in self.melds[self.curr_player_id] for t in m.tiles]
@@ -243,12 +281,11 @@ class Round:
     def play_kan(self, is_closed_kan, is_added_kan, from_who):
         # move tiles to "open" hand
         # though the hand stays closed, since it's closed kan
-        self.open_hand_counts[self.curr_player_id][self.tile.id34()] = 4
-        self.closed_hand_counts[self.curr_player_id][self.tile.id34()] = 0
         i = 0
+        meld_tiles = []
         while i < len(self.closed_hands[self.curr_player_id]):
             if self.tile.id34() == self.closed_hands[self.curr_player_id][i].id34():
-                self.open_hands[self.curr_player_id].append(self.closed_hands[self.curr_player_id].pop(i))
+                meld_tiles.append(self.closed_hands[self.curr_player_id].pop(i))
             else:
                 i += 1
         self.open_kan = not is_closed_kan
@@ -275,9 +312,20 @@ class Round:
         if is_closed_kan:
             self.reveal_dora()
 
-        self.update_board(play_sound_name="tile_meld")
+        if is_added_kan:
+            self.track_steal_tile(self.tile, from_who)
+        elif is_closed_kan:
+            for tile in meld_tiles:
+                self.track_open_tile(tile)
+        else:
+            for tile in meld_tiles:
+                if tile == self.tile:
+                    self.track_steal_tile(tile, from_who)
+                else:
+                    self.track_open_tile(tile)
 
-        # TODO: reveal previously hidden tiles (0 if added, 3 if open, 4 if closed) to other players
+
+        self.update_board(play_sound_name="tile_meld")
 
         # check kan theft, then get another tile from dead wall
         self.event = Event(EventType.AFTER_KAN, self.curr_player_id, from_who)
@@ -293,13 +341,7 @@ class Round:
                 ctr += 1
             else:
                 i += 1
-        self.closed_hand_counts[self.curr_player_id][self.tile.id34()] -= 2  # you take the third one from someone
-        self.open_hand_counts[self.curr_player_id][self.tile.id34()] += 3
-        if self.tile.is_red5():
-            self.red5_discarded[self.tile.id34() // 9] = 0
-            self.red5_open_hand[self.curr_player_id][self.tile.id34() // 9] = 1
         meld_tiles.append(self.tile)
-        self.open_hands[self.curr_player_id].extend(meld_tiles)
 
         self.melds[self.curr_player_id].append(
             Meld(
@@ -311,11 +353,15 @@ class Round:
             )
         )
 
+        for tile in meld_tiles:
+            if tile == self.tile:
+                self.track_steal_tile(tile, from_who)
+            else:
+                self.track_open_tile(tile)
+
         self.update_board(play_sound_name="tile_meld")
 
-        # TODO: reveal previously hidden tiles (2) to other players
-
-    def play_chi(self, possible_chi, call_tiles, from_who):
+    def play_chi(self, possible_chi, chi_prob, from_who):
         # query what chi exactly
         best_chi = possible_chi[0]
         if self.competitors[self.curr_player_id].is_human and len(possible_chi) > 1:
@@ -329,11 +375,11 @@ class Round:
                 self.board.switch_game_state("WAITING")
         elif not self.competitors[self.curr_player_id].is_human and len(possible_chi) > 1:
             best_chi_value = 0.
-            for i, chi in enumerate(possible_chi):
-                for tile_id_mod in chi:
-                    chi_value = call_tiles[self.tile.id34() + tile_id_mod]
-                    if best_chi_value < chi_value:
-                        best_chi = possible_chi[i]
+            for i, chi in enumerate(((-2, -1), (-1, 1), (1, 2))):
+                if chi in possible_chi:
+                    chi_value = chi_prob[i]
+                    if chi_value > best_chi_value:
+                        best_chi = chi
                         best_chi_value = chi_value
 
             if not best_chi_value:
@@ -355,26 +401,25 @@ class Round:
                         break
                 if found:
                     break
-
         meld_tiles.append(self.tile)
-        self.open_hands[self.curr_player_id].extend(meld_tiles)
-        self.open_hand_counts[self.curr_player_id][self.tile.id34()] += 1
+
         self.melds[self.curr_player_id].append(
             Meld(
                 meld_type=Meld.CHI,
                 tiles=[t.id136() for t in meld_tiles],
                 opened=True,
                 called_tile=self.tile.id136(),
-                who=self.curr_player_id, from_who=from_who)
+                who=self.curr_player_id, from_who=from_who
+            )
         )
 
-        if self.tile.is_red5():
-            self.red5_discarded[self.tile.id34() // 9] = 0
-            self.red5_open_hand[self.curr_player_id][self.tile.id34() // 9] = 1
+        for tile in meld_tiles:
+            if tile == self.tile:
+                self.track_steal_tile(tile, from_who)
+            else:
+                self.track_open_tile(tile)
 
         self.update_board(play_sound_name="tile_meld")
-
-        # TODO: reveal previously hidden tiles (2) to other players
 
     def play_riichi(self):
         self.hand_in_riichi[self.curr_player_id] = self.turn_no
@@ -412,14 +457,13 @@ class Round:
         self.board.switch_game_state("WAITING")
         return self.board.chosen_move
 
-    def query_model(self, possible_calls: list[MoveType]):
+    def load_input(self, datapoint, possible_calls):
         tile_to_call = None
         tile_origin = None
-        if MoveType.KAN in possible_calls:
+        if any(2 <= pc.value <= 7 for pc in possible_calls):
             tile_to_call = self.tile.id34()
-            tile_origin = self.curr_player_id
+            tile_origin = self.event.from_who if self.event.from_who is not None else self.event.who
 
-        datapoint = DataPoint()
         datapoint.load_input(
             self.curr_player_id, self.round_no, self.turn_no, self.dealer_id, self.prevalent_wind,
             self.seat_wind[self.curr_player_id], self.closed_hand_counts[self.curr_player_id],
@@ -429,11 +473,15 @@ class Round:
             self.red5_hidden[self.curr_player_id], tile_to_call, tile_origin
         )
 
+    def query_model(self, possible_calls: list[MoveType]):
+        datapoint = DataPoint()
+        self.load_input(datapoint, possible_calls)
+
         # query the model
-        discard_tiles, call_tiles, action = \
+        discard_tiles, which_chi, action = \
             self.competitors[self.curr_player_id].model.get_prediction(datapoint.features)
         discard_tiles = discard_tiles.numpy(force=True)
-        call_tiles = call_tiles.numpy(force=True)
+        which_chi = which_chi.numpy(force=True)
         action = action.numpy(force=True)
 
         # Zero out everything that isn't possible
@@ -450,22 +498,20 @@ class Round:
                     if not self.can_riichi_discard[self.curr_player_id][tile_id]:
                         discard_tiles[tile_id] = 0.
 
+        # turn the results to probabilities
         if MoveType.DISCARD in possible_calls and np.any(discard_tiles):
-            # turn the results to probabilities
             discard_tiles /= np.sum(discard_tiles)
 
         if np.any(action):
-            # turn the results to probabilities
             action /= np.sum(action)
 
         # decide what to do
         discard_tile_id34 = np.argmax(discard_tiles, 0)
 
         discard_tile = None
-        call_tile = None
         take_action = MoveType(np.argmax(action, 0))
 
-        if MoveType.DISCARD:
+        if MoveType.DISCARD in possible_calls:
             if self.closed_hand_counts[self.curr_player_id][discard_tile_id34]:
                 # find the actual tile
                 for tid136 in range(discard_tile_id34 * 4 + 3, discard_tile_id34 * 4 - 1, -1):
@@ -477,7 +523,7 @@ class Round:
                 discard_tile = random.choice(self.closed_hands[self.curr_player_id])
 
         # decide what to do
-        return discard_tile, call_tile, take_action
+        return discard_tile, which_chi, take_action
 
     def run(self):
         self.event = Event(EventType.DRAW_TILE, self.dealer_id)
@@ -506,23 +552,9 @@ class Round:
             self.delay()
             self.changed_curr_player_id()
 
-        if self.event.what == EventType.DRAW_TILE:
-            if self.turn_no == 70:
-                self.event = Event(EventType.WALL_EXHAUSTED)
-                return
-            self.turn_no += 1
-            self.tile = self.wall[self.turn_no - 1]
-        else:
-            self.tile = self.dead_wall[self.dora_revealed_no - 1]
-            if self.dora_revealed_no == 5 and sum(self.open_hand_counts[self.curr_player_id]) != 16:  # 4 kans by >1 player
-                self.four_quads_draw_flag = True
-
-        self.closed_hand_counts[self.curr_player_id][self.tile.id34()] += 1
-        self.closed_hands[self.curr_player_id].append(self.tile)
-        self.hidden_tile_counts[self.curr_player_id][self.tile.id34()] -= 1
-        if self.tile.is_red5():
-            self.red5_closed_hand[self.curr_player_id][self.tile.id34() // 9] = 1
-            self.red5_hidden[self.curr_player_id][self.tile.id34() // 9] = 0
+        self.track_draw_tile()
+        if self.event.what != EventType.DRAW_TILE:
+            return
 
         self.update_board(play_sound_name="tile_draw")
 
@@ -612,6 +644,11 @@ class Round:
         if discard_tile.is_red5():
             self.red5_closed_hand[self.curr_player_id][discard_tile.id34() // 9] = 0
             self.red5_discarded[discard_tile.id34() // 9] = 1
+
+        for p in range(4):
+            if self.curr_player_id == p:
+                continue
+            self.hidden_tile_counts[p][discard_tile.id34()] -= 1
 
         self.waiting_tiles[self.curr_player_id] = [False] * 34
         # For furiten tracking: if ready hand, calculate what tiles needed to win
@@ -721,7 +758,7 @@ class Round:
             is_ron_possible[p] = self.is_ron_possible()
 
         wants = [MoveType.PASS for _ in range(4)]
-        call_tiles = [[] for _ in range(4)]
+        chi_prob = [[] for _ in range(4)]
         for p in range(4):
             if p == from_who or \
                     not (is_chi_possible[p] or is_pon_possible[p] or is_kan_possible[p] or is_ron_possible[p]):
@@ -738,8 +775,8 @@ class Round:
             if is_ron_possible[p]:
                 possible_calls.append(MoveType.RON)
 
-            _, ct, ac = self.decide(possible_calls)
-            call_tiles[p] = ct
+            _, wc, ac = self.decide(possible_calls)
+            chi_prob[p] = wc
             wants[p] = ac
 
         # Handle priority
@@ -780,7 +817,7 @@ class Round:
                 self.play_pon(from_who)
 
             case MoveType.CHI:
-                self.play_chi(possible_chi[self.curr_player_id], call_tiles, from_who)
+                self.play_chi(possible_chi[self.curr_player_id], chi_prob, from_who)
 
             case MoveType.PASS:
                 if self.riichi_status[from_who] == RiichiStatus.RIICHI_NO_STICK:

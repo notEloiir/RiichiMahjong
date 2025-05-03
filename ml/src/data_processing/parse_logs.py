@@ -2,10 +2,12 @@ import gzip
 import xml.etree.ElementTree as ET
 from urllib.parse import unquote
 import re
+import mahjong.constants as mc
 
 from game.src.core.tile import Tile
 from game.src.core.mahjong_enums import MoveType
-from ml.src.data_structures import MoveData, RoundData
+from ml.src.data_structures import MoveData, RoundData, MatchData
+
 
 def parse_xml(xml_data):
     decoded_xml_data = xml_data.decode('utf-8')
@@ -63,11 +65,11 @@ def decode_kan(data, move_info: MoveData):
     move_info.base = tiles
 
 
-def parse_match_log(log_raw):
+def parse_match_log(log_raw, min_dan=17) -> MatchData | None:
     match_xml = gzip.decompress(log_raw)
     match_parsed = parse_xml(match_xml)
 
-    match_info: list[RoundData] = list()
+    match_info = MatchData()
 
     draw_regex = re.compile("[T-W][0-9]+")
     discard_regex = re.compile("[D-G][0-9]+")
@@ -83,21 +85,23 @@ def parse_match_log(log_raw):
                     unwanted_bits = 0b1111_0001_0110
                     # don't care about the rest
 
+                    match_info.prevalent_wind = mc.SOUTH if match_type & 0b0000_0000_1000 else mc.EAST
+
                     if not((match_type & wanted_bits) == wanted_bits and (match_type & unwanted_bits) == 0):
                         # table settings aren't suitable for training
-                        return match_info
+                        return None
 
             case "UN":
                 if "dan" in event.attrib.keys():
-                    if max(int(rank) for rank in event.attrib["dan"].split(',')) <= 17:
+                    if max(int(rank) for rank in event.attrib["dan"].split(',')) <= min_dan:
                         # filter low rank games
-                        return match_info
+                        return None
 
             case "INIT":  # start round
                 new_round = RoundData(int(event.attrib["oya"]), Tile(int(event.attrib["seed"][-1])))
                 for i in range(4):
                     new_round.init_hands[i] = [Tile(int(t)) for t in event.attrib["hai{}".format(i)].split(',')]
-                match_info.append(new_round)
+                match_info.round_data.append(new_round)
 
             case "N":  # call
                 new_move = MoveData()
@@ -112,7 +116,7 @@ def parse_match_log(log_raw):
                 else:
                     decode_kan(data, new_move)
                 new_move.player_id = int(event.attrib["who"])
-                match_info[-1].moves.append(new_move)
+                match_info.round_data[-1].moves.append(new_move)
 
             case "REACH":  # riichi
                 if int(event.attrib["step"]) == 2:
@@ -120,11 +124,11 @@ def parse_match_log(log_raw):
 
                 new_move = MoveData()
                 new_move.move_type = MoveType.RIICHI
-                match_info[-1].moves.append(new_move)
+                match_info.round_data[-1].moves.append(new_move)
                 # tile None base []
 
             case "DORA":  # dora revealed (after kan)
-                match_info[-1].moves[-1].dora_revealed_ind = Tile(int(event.attrib["hai"]))
+                match_info.round_data[-1].moves[-1].dora_revealed_ind = Tile(int(event.attrib["hai"]))
 
             case "AGARI":  # round finishes with someone winning
                 new_move = MoveData()
@@ -132,23 +136,23 @@ def parse_match_log(log_raw):
                     new_move.move_type = MoveType.TSUMO
                 else:
                     new_move.move_type = MoveType.RON
-                    match_info[-1].dealt_in = int(event.attrib["fromWho"])
-                match_info[-1].moves.append(new_move)
+                    match_info.round_data[-1].dealt_in = int(event.attrib["fromWho"])
+                match_info.round_data[-1].moves.append(new_move)
 
-                match_info[-1].score_before = [int(score) for score in event.attrib["sc"].split(',')][::2]
-                match_info[-1].score_change = [int(score) for score in event.attrib["sc"].split(',')][1::2]
+                match_info.round_data[-1].score_before = [int(score) for score in event.attrib["sc"].split(',')][::2]
+                match_info.round_data[-1].score_change = [int(score) for score in event.attrib["sc"].split(',')][1::2]
                 if "doraHai" in event.attrib.keys():
-                    match_info[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
+                    match_info.round_data[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
                 if "doraHaiUra" in event.attrib.keys():
-                    match_info[-1].uradora += [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
+                    match_info.round_data[-1].uradora += [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
 
             case "RYUUKYOKU":  # round finishes with a draw
-                match_info[-1].score_before = [int(score) for score in event.attrib["sc"].split(',')][::2]
-                match_info[-1].score_change = [int(score) for score in event.attrib["sc"].split(',')][1::2]
+                match_info.round_data[-1].score_before = [int(score) for score in event.attrib["sc"].split(',')][::2]
+                match_info.round_data[-1].score_change = [int(score) for score in event.attrib["sc"].split(',')][1::2]
                 if "doraHai" in event.attrib.keys():
-                    match_info[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
+                    match_info.round_data[-1].uradora = [Tile(int(t)) for t in event.attrib["doraHai"].split(',')]
                 if "doraHaiUra" in event.attrib.keys():
-                    match_info[-1].uradora += [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
+                    match_info.round_data[-1].uradora += [Tile(int(t)) for t in event.attrib["doraHaiUra"].split(',')]
 
             case _:
                 if draw_regex.search(event.tag):  # draw tile
@@ -156,12 +160,12 @@ def parse_match_log(log_raw):
                     new_move.move_type = MoveType.DRAW
                     new_move.tile = Tile(int(event.tag[1:]))
                     new_move.player_id = ord(event.tag[0]) - ord("T")
-                    match_info[-1].moves.append(new_move)
+                    match_info.round_data[-1].moves.append(new_move)
                 elif discard_regex.search(event.tag):  # discard tile
                     new_move = MoveData()
                     new_move.move_type = MoveType.DISCARD
                     new_move.tile = Tile(int(event.tag[1:]))
                     new_move.player_id = ord(event.tag[0]) - ord("D")
-                    match_info[-1].moves.append(new_move)
+                    match_info.round_data[-1].moves.append(new_move)
 
     return match_info
