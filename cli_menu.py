@@ -35,7 +35,7 @@ quit
                 raw_data_filename = user_input[2]
 
                 raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "datasets", raw_data_filename)
-                extract_datapoints(db_year + ".db", raw_data_filepath, batch_size=100)
+                extract_datapoints(db_year + ".db", raw_data_filepath, batch_size=1e4)
 
             case "refine":
                 if len(user_input) != 3:

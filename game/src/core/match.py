@@ -43,10 +43,11 @@ def run_match(competitors, seed=0, match_type=mc.EAST, gui=None, match_replay=No
         if not dealer_won:
             non_repeat_round_no += 1
 
-    # limit round number - if models are too "weak" or too similar, the simulation will never end
+    '''
     if min(scores) <= 0 or (non_repeat_round_no >= 3 and max(scores) >= 500):
         print("Match won by someone")
     else:
         print("Draw: too many rounds")
+    '''
 
     return scores, collected_data

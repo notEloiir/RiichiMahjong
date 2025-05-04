@@ -8,10 +8,11 @@ from ml.src.data_processing.parse_logs import parse_match_log
 from game.src.core.match import run_match
 
 
-def extract_datapoints(db_filename, raw_data_filename, batch_size=100):
+def extract_datapoints(db_filename, raw_data_filename, batch_size=1e4):
     db_path = os.path.join(os.getcwd(), "phoenix-logs", "db")
     cursor, match_no = get_match_log_data(db_path, db_filename)
     dataset = DataSet(raw_data_filename)
+    batch_size = int(batch_size)
     print(f"Available {match_no} matches, {math.ceil(match_no / batch_size)} batches")
 
     for batch in range(math.ceil(match_no / batch_size)):
@@ -24,8 +25,16 @@ def extract_datapoints(db_filename, raw_data_filename, batch_size=100):
 
         datapoints: list[DataPoint] = []
         for match_replay in match_replays:
-            _, data = run_match(None, match_replay=match_replay, collect_data=True)
-            datapoints.extend(data)
+            data = None
+            try:
+                _, data = run_match(None, match_replay=match_replay, collect_data=True)
+            except Exception as e:
+                # Due to the bugs' obscurity, rarity and limited time this is good enough
+                pass
+
+            if data is not None:
+                datapoints.extend(data)
+        print(f"Batch {batch + 1}/{math.ceil(match_no / batch_size)}: {len(datapoints)}")
 
         if datapoints:
             dataset.save_batch(datapoints)

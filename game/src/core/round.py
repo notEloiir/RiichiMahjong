@@ -41,6 +41,12 @@ class Event:
         self.who = who
         self.from_who = from_who
 
+    def __repr__(self):
+        return f"{self.what} {self.who} {self.from_who}"
+
+    def __str__(self):
+        return f"{self.what} {self.who} {self.from_who}"
+
 
 # Main game logic
 class Round:
@@ -208,7 +214,7 @@ class Round:
         return [[t // 4 for t in m.tiles] for m in self.melds[self.curr_player_id]]
 
     def is_closed_kan_possible(self):
-        return self.closed_hand_counts[self.curr_player_id][self.tile.id34()] == 4
+        return any(self.closed_hand_counts[self.curr_player_id][i] == 4 for i in range(34))
 
     def is_added_kan_possible(self):
         return any(meld.type == Meld.PON and meld.tiles[0] // 4 == self.tile.id34()
@@ -287,8 +293,13 @@ class Round:
                 self.red5_hidden[p][dora_indicator.id34() // 9] = 0
 
     def play_kan(self, is_closed_kan, is_added_kan, from_who):
-        # move tiles to "open" hand
-        # though the hand stays closed, since it's closed kan
+        # Closed kan can be played with tile not drawn this turn
+        if is_closed_kan and self.closed_hand_counts[self.curr_player_id][self.kan_tile.id34()] != 4:
+            for t in self.closed_hands[self.curr_player_id]:
+                if self.closed_hand_counts[self.curr_player_id][t.id34()] == 4:
+                    self.tile = t
+                    break
+
         meld_tiles = [Tile(t) for t in range(self.tile.id34() * 4, (self.tile.id34() + 1) * 4)]
         self.open_kan = not is_closed_kan
         self.kan_tile = self.tile
@@ -296,10 +307,14 @@ class Round:
         self.discard_after_kan = True
 
         if is_added_kan:
-            for meld in self.melds[self.curr_player_id]:
+            for i, meld in enumerate(self.melds[self.curr_player_id]):
                 if meld.type == Meld.PON and meld.tiles[0] // 4 == self.tile.id34():
-                    meld.type = Meld.KAN
-                    meld.tiles=[t.id136() for t in meld_tiles],
+                    self.melds[self.curr_player_id][i] = Meld(
+                        meld_type=Meld.SHOUMINKAN,
+                        tiles=[t.id136() for t in meld_tiles],
+                        opened=(not is_closed_kan),
+                        who=self.curr_player_id, from_who=meld.from_who
+                    )
                     break
         else:
             self.melds[self.curr_player_id].append(
@@ -317,7 +332,7 @@ class Round:
             self.hand_is_closed[self.curr_player_id] = 0
 
         if is_added_kan:
-            self.track_steal_tile(self.tile, from_who)
+            self.track_open_tile(self.tile)
         elif is_closed_kan:
             for tile in meld_tiles:
                 self.track_open_tile(tile)
@@ -363,7 +378,7 @@ class Round:
 
         self.update_board(play_sound_name="tile_meld")
 
-    def play_chi(self, possible_chi, chi_prob, from_who):
+    def play_chi(self, possible_chi, chi_prob, from_who, exact_tiles=None):
         # query what chi exactly
         best_chi = possible_chi[0]
         if self.competitors[self.curr_player_id].is_human and len(possible_chi) > 1:
@@ -401,6 +416,9 @@ class Round:
                 if found:
                     break
         meld_tiles.append(self.tile)
+
+        if exact_tiles is not None:
+            meld_tiles = exact_tiles
 
         self.melds[self.curr_player_id].append(
             Meld(
@@ -752,7 +770,7 @@ class Round:
 
             is_chi_possible[p] = bool(possible_chi[p])
             is_pon_possible[p] = self.closed_hand_counts[p][self.tile.id34()] >= 2 and not self.hand_in_riichi[p]
-            is_kan_possible[p] = self.closed_hand_counts[p][self.tile.id34()] == 3 and not self.hand_in_riichi[p]
+            is_kan_possible[p] = self.closed_hand_counts[p][self.tile.id34()] == 3
             is_ron_possible[p] = self.is_ron_possible()
 
         wants = [MoveType.PASS for _ in range(4)]
@@ -854,7 +872,7 @@ class Round:
         self.curr_player_id = self.event.who
         # from_who = self.event.from_who
 
-        is_ron_possible = [[False] * 4]
+        is_ron_possible = [False] * 4
         for p in range(4):
             if p == self.event.who:
                 continue
@@ -863,6 +881,7 @@ class Round:
             is_ron_possible[p] = hand_result.error is None and \
                                  (self.open_kan or any([y.name == "Kokushi Musou" for y in hand_result.yaku]))
             # robbing a kan works only on added kan, or closed kan + thirteen orphans
+        self.curr_player_id = self.event.who
 
         self.event = Event(EventType.DRAW_TILE, self.curr_player_id)
         if not any(is_ron_possible):
@@ -870,7 +889,7 @@ class Round:
 
         wants = [MoveType.PASS for _ in range(4)]
         for p in range(4):
-            if p == self.event.who:
+            if p == self.event.who or not is_ron_possible[p]:
                 continue
             self.curr_player_id = p
 
@@ -980,12 +999,14 @@ class Round:
                 + ("<-" + ["Player", "Bot1", "Bot2", "Bot3"][dealt_in] if p != dealt_in else "")
                 + f":{str(hand_result.yaku)}\n"
             )
+            '''
             print(hand_result.han, hand_result.fu)
-            print(hand_result.cost['main'])
+            print(hand_result.cost["main"])
             print(hand_result.yaku)
             for fu_item in hand_result.fu_details:
                 print(fu_item)
-            print('')
+            print("")
+            '''
 
             points_gained[p] = hand_result.cost['main'] // 100
 

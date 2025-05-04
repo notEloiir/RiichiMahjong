@@ -49,8 +49,7 @@ def decode_pon(data, move_info: MoveData):
         move_info.move_type = MoveType.PON
     else:
         tiles = Tile(t0 + 4 * base), Tile(t1 + 4 * base), Tile(t2 + 4 * base), Tile(t4 + 4 * base)
-        # move_info.move_type = MoveType.CHAKAN
-        move_info.move_type = MoveType.PASS
+        move_info.move_type = MoveType.KAN  # or more specifically, chakan
     move_info.tile = tiles[called]
     move_info.base = tiles
 
@@ -58,10 +57,11 @@ def decode_pon(data, move_info: MoveData):
 def decode_kan(data, move_info: MoveData):
     base_and_called = data >> 8
     base = base_and_called // 4
+    called = base_and_called % 4
     tiles = Tile(4 * base), Tile(1 + 4 * base), Tile(2 + 4 * base), Tile(3 + 4 * base)
 
     move_info.move_type = MoveType.KAN
-    move_info.tile = tiles[0]
+    move_info.tile = tiles[called]
     move_info.base = tiles
 
 
