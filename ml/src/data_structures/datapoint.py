@@ -97,6 +97,7 @@ class DataPoint:
         if discard_tile is not None:
             self.labels[discard_tile.id34()] = 1.
         if which_chi is not None:
-            self.labels[self.label_split[0] + which_chi] = 1.
+            which_chi_maxarg = which_chi.index(max(which_chi))
+            self.labels[self.label_split[0] + which_chi_maxarg] = 1.
         if action is not None:
             self.labels[self.label_split[0] + self.label_split[1] + action.value] = 1.

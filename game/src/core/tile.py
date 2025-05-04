@@ -8,24 +8,24 @@ class Tile:
     """
 
     def __init__(self, tile_id136):
-        self.id136 = tile_id136
+        self._id136 = tile_id136
 
     def id136(self):
-        return self.id136
+        return self._id136
 
     def id34(self):
-        return self.id136 // 4
+        return self._id136 // 4
 
     def is_red5(self):
-        return self.id34() < 27 and self.id34() % 9 == 4 and self.id136 % 4 == 0
+        return self.id34() < 27 and self.id34() % 9 == 4 and self._id136 % 4 == 0
 
     def __str__(self):
-        return Tile.TILES.split()[self.id136 // 4]
+        return Tile.TILES.split()[self._id136 // 4]
 
     def __eq__(self, other):
         if type(other) != Tile:
             return False
-        return self.id136 == other.id136
+        return self.id136() == other.id136()
 
     def __hash__(self):
-        return hash(self.id136)
+        return hash(self.id136())

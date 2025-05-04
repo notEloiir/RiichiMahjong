@@ -27,7 +27,8 @@ def run_match(competitors, seed=0, match_type=mc.EAST, gui=None, match_replay=No
     while not (
         min(scores) <= 0 or
         (non_repeat_round_no >= 3 and max(scores) >= 500) or
-        round_no >= 12
+        round_no >= 12 or
+        (match_replay is not None and round_no >= len(match_replay.round_data))
     ):
         if match_replay is None:
             rnd = Round(competitors, scores, non_repeat_round_no, match_type, gui)

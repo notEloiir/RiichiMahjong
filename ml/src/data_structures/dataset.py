@@ -11,8 +11,11 @@ class DataSet:
         path = Path(path)
         self.n_batches = len(list(path.parent.glob(path.name + '*')))
 
-    def save_batch(self, datapoints: list[DataPoint]):
+    # Save datapoints in batches of batch_size
+    # Unless called with empty datapoints, then (last batch) saves with any datapoints left unsaved
+    def save_batch(self, datapoints: list[DataPoint]=None):
         data = np.array([np.concatenate((dp.features, dp.labels)) for dp in datapoints])
+
         np.save(self.path + str(self.n_batches) + ".npy", data)
         self.n_batches += 1
 
