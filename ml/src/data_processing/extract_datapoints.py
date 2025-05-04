@@ -8,15 +8,15 @@ from ml.src.data_processing.parse_logs import parse_match_log
 from game.src.core.match import run_match
 
 
-def extract_datapoints(db_filename, raw_data_filename, batch_size=1e4):
+def extract_datapoints(db_filename, raw_data_filename, ds_part_size=1e4):
     db_path = os.path.join(os.getcwd(), "phoenix-logs", "db")
     cursor, match_no = get_match_log_data(db_path, db_filename)
     dataset = DataSet(raw_data_filename)
-    batch_size = int(batch_size)
-    print(f"Available {match_no} matches, {math.ceil(match_no / batch_size)} batches")
+    ds_part_size = int(ds_part_size)
+    print(f"Available {match_no} matches, {math.ceil(match_no / ds_part_size)} batches")
 
-    for batch in range(math.ceil(match_no / batch_size)):
-        how_many = batch_size if batch == match_no // batch_size else match_no % batch_size
+    for batch in range(math.ceil(match_no / ds_part_size)):
+        how_many = ds_part_size if batch == match_no // ds_part_size else match_no % ds_part_size
         match_replays: list[MatchData] = []
         for match_log in cursor.fetchmany(how_many):
             match_replay = parse_match_log(match_log[0])
@@ -34,7 +34,7 @@ def extract_datapoints(db_filename, raw_data_filename, batch_size=1e4):
 
             if data is not None:
                 datapoints.extend(data)
-        print(f"Batch {batch + 1}/{math.ceil(match_no / batch_size)}: {len(datapoints)}")
+        print(f"Batch {batch + 1}/{math.ceil(match_no / ds_part_size)}: {len(datapoints)}")
 
         if datapoints:
             dataset.save_batch(datapoints)

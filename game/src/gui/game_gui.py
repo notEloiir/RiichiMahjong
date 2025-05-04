@@ -2,12 +2,13 @@ import pygame
 import sys
 import torch
 import threading
+import mahjong.constants as mc
 
 from game.src.gui.board import Board
 from game.src.gui.menu import Menu
 from game.src.core.match import run_match
 from game.src.core.player import  Player
-from ml.src.models.mahjong_nn import load_model
+from ml.src.models.mahjong_nn import MahjongNN
 
 
 class GameGui:
@@ -38,14 +39,14 @@ class GameGui:
 
         competitors = [Player(is_human=True)]
         for _ in range(3):
-            filename = "b0_new"
+            filename = "raw"
             competitors.append(
-                Player(is_human=False, model=load_model(filename, torch.device("cpu")))
+                Player(is_human=False, model=MahjongNN.from_file(filename, torch.device("cpu")))
             )
 
         game = threading.Thread(
             target=run_match,
-            args=(competitors, init_seed, torch.device("cpu"), self),
+            args=(competitors, init_seed, mc.EAST, self),
             daemon=True,
         )
         game.start()

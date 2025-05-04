@@ -483,7 +483,7 @@ class Round:
             tile_to_call = self.tile.id34()
             tile_origin = self.event.from_who if self.event.from_who is not None else self.event.who
 
-        datapoint.load_input(
+        datapoint.load_features(
             self.curr_player_id, self.round_no, self.turn_no, self.dealer_id, self.prevalent_wind,
             self.seat_wind[self.curr_player_id], self.closed_hand_counts[self.curr_player_id],
             self.open_hand_counts, self.discard_orders, self.hidden_tile_counts[self.curr_player_id],
@@ -498,7 +498,7 @@ class Round:
 
         # query the model
         discard_tiles, which_chi, action = \
-            self.competitors[self.curr_player_id].model.get_prediction(datapoint.features)
+            self.competitors[self.curr_player_id].model.get_prediction(datapoint.torch_features())
         discard_tiles = discard_tiles.numpy(force=True)
         which_chi = which_chi.numpy(force=True)
         action = action.numpy(force=True)

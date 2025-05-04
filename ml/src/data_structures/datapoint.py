@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from game.src.core.mahjong_enums import MoveType
 
@@ -14,9 +15,9 @@ def flatten_list(lst):
 
 
 class DataPoint:
-    input_size = 459
+    features_size = 459
     label_split = (34, 3, len(MoveType))
-    label_size = sum(label_split)
+    labels_size = sum(label_split)
 
     feature_columns = \
         ["round_no", "turn_no"] + \
@@ -50,11 +51,11 @@ class DataPoint:
         self.features = np.empty(0, dtype=np.float32)
         self.labels = np.empty(0, dtype=np.float32)
 
-    def load_input(self, seat, round_no, turn_no, dealer, prevalent_wind, seat_wind,
-                   closed_hand_counts, open_hand_counts, discard_pile_orders,
-                   hidden_tile_counts, dora_indicator_counts, hand_is_closed, hand_in_riichi,
-                   scores, red5_closed_hand, red5_open_hand, red5_discarded, red5_hidden,
-                   tile_to_call=None, tile_origin=None) -> None:
+    def load_features(self, seat, round_no, turn_no, dealer, prevalent_wind, seat_wind,
+                      closed_hand_counts, open_hand_counts, discard_pile_orders,
+                      hidden_tile_counts, dora_indicator_counts, hand_is_closed, hand_in_riichi,
+                      scores, red5_closed_hand, red5_open_hand, red5_discarded, red5_hidden,
+                      tile_to_call=None, tile_origin=None) -> None:
         dealer_arr = [0] * 4
         dealer_arr[dealer] = 1
         prev_wind_arr = [0] * 4
@@ -92,7 +93,7 @@ class DataPoint:
         )
 
     def load_labels(self, discard_tile, which_chi, action):
-        self.labels = np.zeros(self.label_size, dtype=np.float32)
+        self.labels = np.zeros(self.labels_size, dtype=np.float32)
 
         if discard_tile is not None:
             self.labels[discard_tile.id34()] = 1.
@@ -101,3 +102,9 @@ class DataPoint:
             self.labels[self.label_split[0] + which_chi_maxarg] = 1.
         if action is not None:
             self.labels[self.label_split[0] + self.label_split[1] + action.value] = 1.
+
+    def torch_features(self) -> torch.Tensor:
+        return torch.from_numpy(self.features)
+
+    def torch_labels(self) -> torch.Tensor:
+        return torch.from_numpy(self.labels)

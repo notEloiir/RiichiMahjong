@@ -1,9 +1,6 @@
 # custom
 phoenix-logs/
 .idea/
-test.py
-ml/data/models/*
-!ml/data/models/b0_new
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

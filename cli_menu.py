@@ -1,8 +1,10 @@
 import torch
 import os
 
-from ml.src.models import versus
-from ml.src.models.mahjong_nn import get_device, initialize_model, train_model, save_model, load_model
+from ml.src.data_structures.dataset import DataSet
+from ml.src.models import versus, MahjongNN
+from ml.src.models.handle_device import get_device
+from ml.src.models.mahjong_nn import MahjongNN
 from game.src.core.player import Player
 from ml.src.data_processing import extract_datapoints, refine_data
 
@@ -13,11 +15,11 @@ if __name__ == "__main__":
 
     while True:
         print('''
-Select mode:  (train auto-saves checkpoints and saves the result)
+Select mode:
 data [db_year] [raw_data_filename] - extract datapoints
-refine [raw_data_filename] [refined_data_filename] - refine data
+process [raw_data_filename] [processed_data_filename] - refine data
 init [num_layers] [hidden_size]
-train [batch_size] [data_filename] [model_filename] - train on data at data_filename, saves model as model_filename
+train [processed_data_filename]
 save [filename]
 load [filename] (will call init with proper arguments)
 versus [how_many_matches] [init_seed]  - compare models against each other
@@ -34,8 +36,8 @@ quit
                 db_year = user_input[1]
                 raw_data_filename = user_input[2]
 
-                raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "datasets", raw_data_filename)
-                extract_datapoints(db_year + ".db", raw_data_filepath, batch_size=1e4)
+                raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "raw", raw_data_filename)
+                extract_datapoints(db_year + ".db", raw_data_filepath, ds_part_size=1e4)
 
             case "refine":
                 if len(user_input) != 3:
@@ -43,11 +45,11 @@ quit
                     continue
 
                 raw_data_filename = user_input[1]
-                raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "datasets", raw_data_filename)
-                refined_data_filename = user_input[2]
-                refined_data_filepath = os.path.join(os.getcwd(), "ml", "data", "datasets", raw_data_filename)
+                raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "raw", raw_data_filename)
+                processed_data_filename = user_input[2]
+                processed_data_filepath = os.path.join(os.getcwd(), "ml", "data", "processed", processed_data_filename)
 
-                refine_data(raw_data_filepath, refined_data_filepath)
+                refine_data(raw_data_filepath, processed_data_filepath)
 
             case "init":
                 if len(user_input) != 3:
@@ -56,18 +58,17 @@ quit
 
                 num_layers = int(user_input[1])
                 hidden_size = int(user_input[2])
-                model = initialize_model(num_layers, hidden_size, device)
+                model = MahjongNN(num_layers, hidden_size, device)
 
             case "train":
-                if len(user_input) != 4:
-                    print("Expecting 3 arguments for train, got {}.".format(len(user_input) - 1))
+                if len(user_input) != 2:
+                    print("Expecting 1 arguments for train, got {}.".format(len(user_input) - 1))
                     continue
 
-                batch_size = int(user_input[1])
-                data_filename = user_input[2]
-                data_filepath = os.path.join(os.getcwd(), "ml", "data", "datasets", data_filename)
-                model_filename = user_input[3]
-                train_model(model, batch_size, device, model_filename, data_filepath)
+                data_filename = user_input[1]
+                data_filepath = os.path.join(os.getcwd(), "ml", "data", "processed", data_filename)
+                dataset = DataSet(data_filepath, device=device)
+                model.train_model(dataset)
 
             case "save":
                 if len(user_input) != 2:
@@ -75,7 +76,7 @@ quit
                     continue
                 filename = user_input[1]
                 print("Saving model to ", filename)
-                save_model(model, filename)
+                model.save_model(filename)
 
             case "load":
                 if len(user_input) != 2:
@@ -83,7 +84,7 @@ quit
                     continue
                 filename = user_input[1]
                 print("Loading models from ", filename)
-                model = load_model(filename, device=device)
+                model = MahjongNN.from_file(filename, device=device)
 
             case "versus":
                 if len(user_input) != 3:
@@ -101,7 +102,7 @@ quit
                         print("Expecting 1 argument for load for versus, got {}.".format(len(input2)))
                         continue
                     filename = input2[0]
-                    competitors.append(Player(is_human=False, model=load_model(filename, torch.device("cpu"))))
+                    competitors.append(Player(is_human=False, model=MahjongNN.from_file(filename, torch.device("cpu"))))
                     names.append(filename)
                     i += 1
 
