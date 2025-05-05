@@ -141,7 +141,7 @@ class Round:
         self.board = self.gui.game_screen
         self.update_board()
 
-    def update_board(self, play_sound_name=""):
+    def update_board(self, play_sound_name=None):
         # update board
         if not self.board:
             return
@@ -164,8 +164,8 @@ class Round:
             exit()
         self.board.update_curr_player_id(self.curr_player_id)
 
-    def delay(self, t=0.5):
-        if self.board and not self.competitors[self.curr_player_id].is_human:
+    def delay(self, t=0.5, delay_human=False):
+        if self.board and (not self.competitors[self.curr_player_id].is_human or delay_human):
             sleep(t)
 
     def track_draw_tile(self, tile=None):
@@ -189,6 +189,8 @@ class Round:
         if self.tile.is_red5():
             self.red5_closed_hand[self.curr_player_id][self.tile.id34() // 9] = 1
             self.red5_hidden[self.curr_player_id][self.tile.id34() // 9] = 0
+
+        self.update_board(play_sound_name="tile_draw")
 
     def track_steal_tile(self, tile, from_who):
         self.open_hands[self.curr_player_id].append(self.discard_piles[from_who].pop())
@@ -343,7 +345,7 @@ class Round:
                 else:
                     self.track_open_tile(tile)
 
-
+        self.delay()
         self.update_board(play_sound_name="tile_meld")
 
         # check kan theft, then get another tile from dead wall
@@ -376,6 +378,7 @@ class Round:
             else:
                 self.track_open_tile(tile)
 
+        self.delay()
         self.update_board(play_sound_name="tile_meld")
 
     def play_chi(self, possible_chi, chi_prob, from_who, exact_tiles=None):
@@ -437,6 +440,7 @@ class Round:
             else:
                 self.track_open_tile(tile)
 
+        self.delay()
         self.update_board(play_sound_name="tile_meld")
 
     def play_riichi(self):
@@ -473,8 +477,9 @@ class Round:
             if not self.gui.playing:
                 exit()
             pass
+        output = self.board.chosen_move
         self.board.switch_game_state("WAITING")
-        return self.board.chosen_move
+        return output
 
     def load_input(self, datapoint, possible_calls):
         tile_to_call = None
@@ -569,13 +574,11 @@ class Round:
         self.curr_player_id = self.event.who
         if self.board:
             self.changed_curr_player_id()
-            self.delay()
+            self.delay(delay_human=True)
 
         self.track_draw_tile()
         if self.event.what != EventType.DRAW_TILE:
             return
-
-        self.update_board(play_sound_name="tile_draw")
 
         # check for nine orphans draw
         if self.first_move[self.curr_player_id] and sum(
@@ -694,15 +697,10 @@ class Round:
         if self.discard_after_kan and self.open_kan:
             self.reveal_dora()
 
-        # update board
-        if self.board:
-            self.update_board(play_sound_name="tile_discard")
-
         # update hand status trackers
         self.discard_after_kan = False
         self.first_move[self.curr_player_id] = False
         self.ippatsu[self.curr_player_id] = False
-        furiten_before = self.furiten_status[self.curr_player_id]
         if self.riichi_status[self.curr_player_id] == RiichiStatus.RIICHI_DISCARD:
             self.riichi_status[self.curr_player_id] = RiichiStatus.RIICHI_NO_STICK
             self.ippatsu[self.curr_player_id] = True
@@ -716,8 +714,8 @@ class Round:
         ):
             self.furiten_status[self.curr_player_id] = FuritenStatus.TEMP_FURITEN
 
-        if self.board and furiten_before != self.furiten_status[self.curr_player_id]:
-            self.update_board()
+        if self.board:
+            self.update_board(play_sound_name="tile_discard")
 
         self.event = Event(EventType.TILE_DISCARDED, self.curr_player_id)
 
@@ -847,7 +845,6 @@ class Round:
                     else FuritenStatus.TEMP_FURITEN
 
         if decision != MoveType.PASS:
-            self.delay()
             self.nagashi_mangan[from_who] = False
             if decision == MoveType.KAN:
                 self.event = Event(EventType.AFTER_KAN, self.curr_player_id, from_who)
