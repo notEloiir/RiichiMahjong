@@ -78,10 +78,10 @@ class ReplayRound(Round):
         next_move = self.replay_rounds.moves[self.move_id + 1]
         match self.deciding_what:
             case EventType.DRAW_TILE:
-                if MoveType.ABORT in possible_calls:
+                if MoveType.DRAW in possible_calls:
                     # possible calls: PASS ABORT(kyuushu kyuhai)
                     # output: take_action
-                    if next_move.move_type == MoveType.ABORT:
+                    if next_move.move_type == MoveType.DRAW:
                         self.increment_move()
                         take_action = self.move.move_type
                     else:

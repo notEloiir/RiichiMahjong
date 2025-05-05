@@ -582,10 +582,10 @@ class Round:
                 [self.closed_hand_counts[self.curr_player_id][i] for i in
                  mc.TERMINAL_INDICES + list(range(26, 34))]) >= 9:
 
-            possible_calls = [MoveType.PASS, MoveType.ABORT]
+            possible_calls = [MoveType.PASS, MoveType.DRAW]
             _, _, action = self.decide(possible_calls)
 
-            if action == MoveType.ABORT:
+            if action == MoveType.DRAW:
                 self.event = Event(EventType.ROUND_DRAW, -1)
                 return
 

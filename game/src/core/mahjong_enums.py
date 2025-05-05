@@ -34,7 +34,6 @@ class MoveType(Enum):
     TSUMO = 6
     KAN = 7
     DRAW = 8
-    ABORT = 9
 
     def __str__(self):
         return self.name

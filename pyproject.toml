@@ -9,6 +9,7 @@ dependencies = [
     "numpy>=2.2.5",
     "pygame>=2.6.1",
     "pygame-ce>=2.5.3",
+    "requests>=2.32.3",
     "torch>=2.7.0",
 ]
 

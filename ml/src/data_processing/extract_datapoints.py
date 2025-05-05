@@ -19,7 +19,7 @@ def extract_datapoints(db_filename, raw_data_filename, ds_part_size=1e4):
         how_many = ds_part_size if batch == match_no // ds_part_size else match_no % ds_part_size
         match_replays: list[MatchData] = []
         for match_log in cursor.fetchmany(how_many):
-            match_replay = parse_match_log(match_log[0])
+            match_replay = parse_match_log(match_log[0], min_dan=16)
             if match_replay is not None:
                 match_replays.append(match_replay)
 
@@ -30,6 +30,7 @@ def extract_datapoints(db_filename, raw_data_filename, ds_part_size=1e4):
                 _, data = run_match(None, match_replay=match_replay, collect_data=True)
             except Exception as e:
                 # Due to the bugs' obscurity, rarity and limited time this is good enough
+                # From what I gather mostly due to differences in how a winning hand is counted
                 pass
 
             if data is not None:

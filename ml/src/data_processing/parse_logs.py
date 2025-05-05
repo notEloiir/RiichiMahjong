@@ -65,7 +65,7 @@ def decode_kan(data, move_info: MoveData):
     move_info.base = tiles
 
 
-def parse_match_log(log_raw, min_dan=17) -> MatchData | None:
+def parse_match_log(log_raw, min_dan=16) -> MatchData | None:
     match_xml = gzip.decompress(log_raw)
     match_parsed = parse_xml(match_xml)
 
