@@ -87,7 +87,7 @@ class PlayerHand(Hand):
         self.selected_tile = None
         self.restricted = []
 
-    def restrict_tiles(self, can_select_tiles: list[int]):
+    def restrict_tiles(self, can_select_tiles: list[bool]):
         for tile_spr in self.closed_tiles:
             tile = tile_spr.tile
 
@@ -101,27 +101,27 @@ class PlayerHand(Hand):
         self.restricted.clear()
 
     def handle_click(self, mouse_pos):
-        for tile in self.closed_tiles:
-            if tile.rect.collidepoint(mouse_pos) and tile not in self.restricted:
-                self.selected_tile = tile
+        for tile_spr in self.closed_tiles:
+            if tile_spr.rect.collidepoint(mouse_pos) and tile_spr.tile not in self.restricted:
+                self.selected_tile = tile_spr
 
     def draw(self, display_surface):
         super().draw(display_surface)
 
-        for tile in self.closed_tiles:
-            if tile.rect.collidepoint(pygame.mouse.get_pos()):
+        for tile_spr in self.closed_tiles:
+            if tile_spr.rect.collidepoint(pygame.mouse.get_pos()) and tile_spr.tile not in self.restricted:
                 pygame.draw.circle(
                     display_surface,
                     settings.PRIMARY_COLOR,
-                    (tile.rect.center[0], tile.rect.center[1] + tile.size[1] // 2 + 10),
+                    (tile_spr.rect.center[0], tile_spr.rect.center[1] + tile_spr.size[1] // 2 + 10),
                     5,
                     2,
                 )
-            if self.selected_tile and tile.tile == self.selected_tile.tile:
-                pygame.draw.circle(
-                    display_surface,
-                    settings.PRIMARY_COLOR,
-                    (tile.rect.center[0], tile.rect.center[1] + tile.size[1] // 2 + 10),
-                    5,
-                    5,
-                )
+        if self.selected_tile:
+            pygame.draw.circle(
+                display_surface,
+                settings.PRIMARY_COLOR,
+                (self.selected_tile.rect.center[0], self.selected_tile.rect.center[1] + self.selected_tile.size[1] // 2 + 10),
+                5,
+                5,
+            )

@@ -652,9 +652,6 @@ class Round:
                 pass
             discard_tile = self.board.player_hand.selected_tile.tile
             self.board.switch_game_state("WAITING")
-
-            if self.riichi_status[self.curr_player_id] == RiichiStatus.RIICHI_DISCARD:
-                self.board.lift_restriction_tiles()
         else:
             self.delay()
             # query the model what to discard
@@ -922,22 +919,26 @@ class Round:
                 return
 
         has_tenpai = [0] * 4  # ready hand
+        score_change = [0] * 4
         for p in range(4):
             has_tenpai[p] = int(correct_shanten([self.closed_hand_counts[p][i] +
                                                  self.open_hand_counts[p][i] for i in range(34)], self.melds[p]) <= 0)
         match sum(has_tenpai):
             case 3:
                 for p in range(4):
-                    self.scores[p] += 10 if has_tenpai[p] else -30
+                    score_change[p] = 10 if has_tenpai[p] else -30
             case 2:
                 for p in range(4):
-                    self.scores[p] += 15 if has_tenpai[p] else -15
+                    score_change[p] = 15 if has_tenpai[p] else -15
             case 1:
                 for p in range(4):
-                    self.scores[p] += 30 if has_tenpai[p] else -10
+                    score_change[p] = 30 if has_tenpai[p] else -10
+
+        for p in range(4):
+            self.scores[p] += score_change[p]
 
         if self.board:
-            self.board.show_scores(self.scores, [0] * 4, "Wall exhausted")
+            self.board.show_scores(self.scores, score_change, "Wall exhausted")
             while not self.board.score_display.ready_to_continue:
                 if not self.gui.playing:
                     exit()
