@@ -1,4 +1,0 @@
-torch==2.2.1
-mahjong~=1.2.1
-pygame~=2.5.2
-pygame-ce~=2.4.1
