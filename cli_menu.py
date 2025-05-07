@@ -68,7 +68,7 @@ quit
 
                 data_filename = user_input[1]
                 data_filepath = os.path.join(os.getcwd(), "ml", "data", "processed", data_filename)
-                dataset = DataSet.from_file(data_filepath, device=device)
+                dataset = DataSet(data_filepath, device=device)
                 model.train_model(dataset)
 
             case "save":

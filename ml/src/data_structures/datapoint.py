@@ -20,31 +20,6 @@ class DataPoint:
     labels_size = sum(label_sizes)
     label_split = (34, 34 + 3)
 
-    feature_columns = \
-        ["round_no", "turn_no"] + \
-        [f"dealer_{p}" for p in range(4)] + \
-        [f"prevalent_wind_{p}" for p in range(4)] + \
-        [f"seat_wind_{p}" for p in range(4)] + \
-        [f"closed_hand_counts_{i}" for i in range(34)] + \
-        [f"open_hand_counts_{i // 34}_{i % 34}" for i in range(4 * 34)] + \
-        [f"discard_pile_orders_{i // 34}_{i % 34}" for i in range(4 * 34)] + \
-        [f"hidden_hand_counts_{i}" for i in range(34)] + \
-        [f"dora_indicator_counts_{i % 34}" for i in range(34)] + \
-        [f"hand_is_closed_{p}" for p in range(4)] + \
-        [f"hand_in_riichi_{p}" for p in range(4)] + \
-        [f"score_{p}" for p in range(4)] + \
-        [f"red5_closed_hand_{i}" for i in range(3)] + \
-        [f"red5_open_hand_{i // 3}_{i % 3}" for i in range(4 * 3)] + \
-        [f"red5_discarded_{i // 3}_{i % 3}" for i in range(4 * 3)] + \
-        [f"red5_hidden_{i}" for i in range(3)] + \
-        [f"tile_to_call_{i}" for i in range(34)] + \
-        [f"tile_origin_{p}" for p in range(4)]
-    label_columns = \
-        [f"discard_tile_{i}" for i in range(34)] + \
-        [f"which_chi_{i}" for i in range(3)] + \
-        [f"action_{i}" for i in range(len(MoveType))]
-    columns = feature_columns + label_columns
-
     features: np.ndarray
     labels: np.ndarray
 

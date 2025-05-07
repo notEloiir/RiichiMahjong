@@ -49,7 +49,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
     1. example (maybe doesn't work on Linux):
     - download ids: `uv run python phoenix-logs/main.py -a id -y 2017`
     - download content (needs ids): `uv run python phoenix-logs/main.py -a content -y 2017 -l 1000 -t 50`
-      - 1000 matches is about 400MiB of raw data (float32, after preliminary filtering)
+      - 60 000 matches is about 1GiB of raw data (parquet, float32, after preliminary filtering)
     - check content (optional): `uv run python phoenix-logs/debug.py -y 2017`
 
 2. Open CLI menu

@@ -26,7 +26,7 @@ class MahjongNN(nn.Module):
             self.heads.append(nn.Linear(hidden_size, head_size))
 
         self.optimizer = optim.AdamW(self.parameters(), lr=1e-3, weight_decay=1e-3)
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=50)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=256, eta_min=1e-6)
 
         self.to(device)
         self.device = device
@@ -44,19 +44,18 @@ class MahjongNN(nn.Module):
         # probabilities for discard_tiles, which_chi, action
         return [torch.softmax(y_pred, dim=1)[0] for y_pred in y_preds]
 
-    def train_model(self, dataset: DataSet, epochs_no=100):
+    def train_model(self, dataset: DataSet, epochs_no=5):
         criterions = [
             nn.CrossEntropyLoss(weight=dataset.torch_weights(i)) for i in range(len(self.heads))
         ]
 
         self.train()
         for epoch in range(epochs_no):
-            epoch_loss = 0.0
             for X, y in dataset:
                 y_split = torch.hsplit(y, DataPoint.label_split)
 
                 # forward pass
-                y_preds = self(X)  # a list of (batch, head_size) logits
+                y_preds = self(X)  # (n_heads, batch, head_size) logits
 
                 # get loss
                 total_loss = criterions[0](y_preds[0], y_split[0])
@@ -68,8 +67,7 @@ class MahjongNN(nn.Module):
                 total_loss.backward()
                 self.optimizer.step()
 
-                epoch_loss += total_loss.item()
-            self.scheduler.step()
+                self.scheduler.step()  # T_max == 256 == number of datapoints in batch
 
     def test_model(self, dataset: DataSet):
         criterions = [
@@ -103,7 +101,6 @@ class MahjongNN(nn.Module):
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict(),
         }, model_path)
-        print("Model saved to {}.".format(filename))
 
 
     @staticmethod
