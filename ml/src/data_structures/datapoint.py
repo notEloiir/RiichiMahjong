@@ -16,8 +16,9 @@ def flatten_list(lst):
 
 class DataPoint:
     features_size = 459
-    label_split = (34, 3, len(MoveType))
-    labels_size = sum(label_split)
+    label_sizes = (34, 3, len(MoveType))
+    labels_size = sum(label_sizes)
+    label_split = (34, 34 + 3)
 
     feature_columns = \
         ["round_no", "turn_no"] + \
@@ -99,9 +100,9 @@ class DataPoint:
             self.labels[discard_tile.id34()] = 1.
         if which_chi is not None:
             which_chi_maxarg = which_chi.index(max(which_chi))
-            self.labels[self.label_split[0] + which_chi_maxarg] = 1.
+            self.labels[self.label_sizes[0] + which_chi_maxarg] = 1.
         if action is not None:
-            self.labels[self.label_split[0] + self.label_split[1] + action.value] = 1.
+            self.labels[self.label_sizes[0] + self.label_sizes[1] + action.value] = 1.
 
     def torch_features(self) -> torch.Tensor:
         return torch.from_numpy(self.features)

@@ -2,7 +2,6 @@ import os
 import torch.nn as nn
 import torch.optim as optim
 import torch.cuda
-import torch.nn.functional as F
 
 from ml.src.data_structures import DataPoint
 from ml.src.data_structures.dataset import DataSet
@@ -22,11 +21,12 @@ class MahjongNN(nn.Module):
         for _ in range(num_layers - 2):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
             self.layers.append(nn.ReLU())
-        self.layers.append(nn.Linear(hidden_size, self.output_size))
-        # sigmoid in is get_prediction() for inference, for training it's in BCEWithLogitsLoss
+        self.heads = nn.ModuleList()
+        for head_size in DataPoint.label_sizes:
+            self.heads.append(nn.Linear(hidden_size, head_size))
 
         self.optimizer = optim.AdamW(self.parameters(), lr=1e-3, weight_decay=1e-3)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=10, factor=0.5, min_lr=1e-6)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=50)
 
         self.to(device)
         self.device = device
@@ -35,47 +35,63 @@ class MahjongNN(nn.Module):
         # pass input through each layer
         for layer in self.layers:
             x = layer(x)
-        return x
+
+        return [head(x) for head in self.heads]
 
     def get_prediction(self, input_vector: torch.Tensor):
-        out = self(input_vector.unsqueeze(0))[0]
+        y_preds = self(input_vector.unsqueeze(0))
 
-        # discard_tiles, call_tiles, action
-        return torch.split(F.sigmoid(out), DataPoint.label_split)
+        # probabilities for discard_tiles, which_chi, action
+        return [torch.softmax(y_pred, dim=1)[0] for y_pred in y_preds]
 
-    def train_model(self, dataset: DataSet, epochs_no=10):
+    def train_model(self, dataset: DataSet, epochs_no=100):
+        criterions = [
+            nn.CrossEntropyLoss(weight=dataset.torch_weights(i)) for i in range(len(self.heads))
+        ]
+
         self.train()
         for epoch in range(epochs_no):
+            epoch_loss = 0.0
             for X, y in dataset:
+                y_split = torch.hsplit(y, DataPoint.label_split)
+
                 # forward pass
-                y_pred = self(X)
+                y_preds = self(X)  # a list of (batch, head_size) logits
 
                 # get loss
-                criterion = nn.BCEWithLogitsLoss()
-                loss = criterion(y_pred, y)
+                total_loss = criterions[0](y_preds[0], y_split[0])
+                for i in range(1, len(self.heads)):
+                    total_loss += criterions[i](y_preds[i], y_split[i])
 
                 # backward pass and optimization
                 self.optimizer.zero_grad()
-                loss.backward()
+                total_loss.backward()
                 self.optimizer.step()
-                self.scheduler.step(loss.item())
+
+                epoch_loss += total_loss.item()
+            self.scheduler.step()
 
     def test_model(self, dataset: DataSet):
-        total_loss = 0
+        criterions = [
+            nn.CrossEntropyLoss(weight=dataset.torch_weights(i)) for i in range(len(self.heads))
+        ]
+
         self.eval()
+        epoch_loss = 0.0
         with torch.no_grad():
             for X, y in dataset:
                 # forward pass
-                y_pred = self(X)
+                y_preds = self(X)  # a list of (batch, head_size) logits
 
                 # get loss
-                criterion = nn.BCEWithLogitsLoss()
-                loss = criterion(y_pred, y)
+                total_loss = criterions[0](y_preds[0], y[0])
+                for i in range(1, len(self.heads)):
+                    total_loss += criterions[i](y_preds[i], y[i])
 
-                total_loss += loss.item()
+                epoch_loss += total_loss.item()
 
-        average_loss = total_loss / dataset.n_datapoints
-        print("Average Loss on Evaluation Dataset:\t", average_loss)
+        average_loss = epoch_loss / dataset.n_datapoints
+        print("Average loss on test:", average_loss)
 
 
     def save_model(self, filename: str):

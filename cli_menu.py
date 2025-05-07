@@ -16,7 +16,7 @@ if __name__ == "__main__":
     while True:
         print('''
 Select mode:
-data [db_year] [raw_data_filename] - extract datapoints
+data [db_year] [raw_data_filename] [how_many_matches] - extract datapoints
 process [raw_data_filename] [processed_data_filename] - refine data
 init [num_layers] [hidden_size]
 train [processed_data_filename]
@@ -29,17 +29,18 @@ quit
         user_input = input().split(' ')
         match user_input[0]:
             case "data":
-                if len(user_input) != 3:
-                    print("Expecting 2 arguments for init, got {}.".format(len(user_input) - 1))
+                if len(user_input) != 4:
+                    print("Expecting 3 arguments for init, got {}.".format(len(user_input) - 1))
                     continue
 
                 db_year = user_input[1]
                 raw_data_filename = user_input[2]
+                how_many = int(user_input[3])
 
                 raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "raw", raw_data_filename)
-                extract_datapoints(db_year + ".db", raw_data_filepath, ds_part_size=1e4)
+                extract_datapoints(db_year + ".db", raw_data_filepath, how_many=how_many)
 
-            case "refine":
+            case "process":
                 if len(user_input) != 3:
                     print("Expecting 2 arguments for init, got {}.".format(len(user_input) - 1))
                     continue
@@ -67,7 +68,7 @@ quit
 
                 data_filename = user_input[1]
                 data_filepath = os.path.join(os.getcwd(), "ml", "data", "processed", data_filename)
-                dataset = DataSet(data_filepath, device=device)
+                dataset = DataSet.from_file(data_filepath, device=device)
                 model.train_model(dataset)
 
             case "save":
