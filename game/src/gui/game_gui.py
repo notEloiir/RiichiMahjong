@@ -39,7 +39,7 @@ class GameGui:
 
         competitors = [Player(is_human=True)]
         for _ in range(3):
-            filename = "raw"
+            filename = "2017_raw_500"
             competitors.append(
                 Player(is_human=False, model=MahjongNN.from_file(filename, torch.device("cpu")))
             )
