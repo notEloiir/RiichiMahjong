@@ -7,6 +7,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 ## Features
 
 - **Neural network model training**
+- **Training using Ray**
 - **Model comparison**
 - **Interactive GUI** which lets you play against selected models
 
@@ -65,7 +66,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
     - `init 8 512`
     - `train 2017processed`
     - `save 2017model`
-    2. Alternatively - using Ray (recommend using dataset with smaller batches)
+    2. Alternatively - using Ray (recommended using dataset with smaller batches)
     - `ray 2017processed`
     - result will be written as `ray.pt`
 
