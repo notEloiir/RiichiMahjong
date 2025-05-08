@@ -7,6 +7,7 @@ from ml.src.models.handle_device import get_device
 from ml.src.models.mahjong_nn import MahjongNN
 from game.src.core.player import Player
 from ml.src.data_processing import extract_datapoints, refine_data
+from ml.src.ray.ray_script import run_ray_script
 
 if __name__ == "__main__":
     device = get_device()
@@ -17,6 +18,7 @@ if __name__ == "__main__":
 Select mode:
 data [db_year] [raw_data_filename] [how_many_matches] [chunk_size] - extract datapoints
 process [raw_data_filename] [processed_data_filename] - refine data
+ray [processed_data_filename] - init + train + save as ray.pt
 init [num_layers] [hidden_size]
 train [processed_data_filename]
 save [filename]
@@ -51,6 +53,15 @@ quit
                 processed_data_filepath = os.path.join(os.getcwd(), "ml", "data", "processed", processed_data_filename)
 
                 refine_data(raw_data_filepath, processed_data_filepath)
+
+            case "ray":
+                if len(user_input) != 2:
+                    print("Expecting 1 arguments for train, got {}.".format(len(user_input) - 1))
+                    continue
+
+                data_filename = user_input[1]
+                data_filepath = os.path.join(os.getcwd(), "ml", "data", "processed", data_filename)
+                run_ray_script(data_filepath, torch.device("cpu"), n_workers=2)
 
             case "init":
                 if len(user_input) != 3:

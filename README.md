@@ -65,4 +65,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
     - `init 8 512`
     - `train 2017processed`
     - `save 2017model`
+    2. Alternatively - using Ray (recommend using dataset with smaller batches)
+    - `ray 2017processed`
+    - result will be written as `ray.pt`
 

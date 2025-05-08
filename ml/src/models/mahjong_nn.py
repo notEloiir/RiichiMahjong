@@ -92,15 +92,16 @@ class MahjongNN(nn.Module):
         print("Average loss on test:", average_loss)
 
 
-    def save_model(self, filename: str):
-        model_path = os.path.join(os.getcwd(), "ml", "data", "models", filename)
+    def save_model(self, filename: str, model_path=None):
+        if model_path is None:
+            model_path = os.path.join(os.getcwd(), "ml", "data", "models")
         torch.save({
             'num_layers': self.num_layers,
             'hidden_size': self.hidden_size,
             'model_state_dict': self.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict(),
-        }, model_path)
+        }, os.path.join(model_path, filename))
 
 
     @staticmethod

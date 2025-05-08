@@ -3,15 +3,15 @@ name = "riichimahjong"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "mahjong>=1.2.1",
     "numpy>=2.2.5",
-    "pyarrow>=20.0.0",
+    "pyarrow>=17.0.0",
     "pygame>=2.6.1",
     "pygame-ce>=2.5.3",
     "requests>=2.32.3",
-    "torch>=2.7.0",
+    "ray[default,data,train]"
 ]
 
 [project.optional-dependencies]
