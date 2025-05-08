@@ -34,6 +34,8 @@ class DataSet:
         [f"which_chi_{i}" for i in range(3)] + \
         [f"action_{i}" for i in range(len(MoveType))]
     columns = feature_columns + label_columns
+    n_features = len(feature_columns)
+    n_labels = len(label_columns)
 
     def __init__(self, data_dir: str, device: torch.device = torch.device("cpu"), batch_size: int = 256):
         self.data_dir = data_dir
@@ -47,9 +49,6 @@ class DataSet:
             frag.metadata.num_rows
             for frag in self._dataset.get_fragments()
         )
-        schema = self._dataset.schema
-        self._feat_idxs = [schema.get_field_index(c) for c in self.feature_columns]
-        self._label_idxs = [schema.get_field_index(c) for c in self.label_columns]
 
         self.weights = np.empty(0)
         self.calc_weights()
@@ -85,13 +84,9 @@ class DataSet:
 
     def __iter__(self):
         scanner = self._dataset.scanner(batch_size=self.batch_size)
-        for rb in scanner.to_batches():
-            # pull out the Arrow arrays by index
-            feat_cols = [rb.column(i).to_numpy() for i in self._feat_idxs]
-            label_cols = [rb.column(i).to_numpy() for i in self._label_idxs]
-
-            X_np = np.stack(feat_cols, axis=1)
-            y_np = np.stack(label_cols, axis=1)
+        for batch in scanner.to_batches():
+            X_np = np.column_stack([batch.column(i).to_numpy() for i in range(DataSet.n_features)])
+            y_np = np.column_stack([batch.column(i).to_numpy() for i in range(DataSet.n_features, DataSet.n_features + DataSet.n_labels)])
 
             # convert to torch, pin, move to device
             X = torch.from_numpy(X_np).pin_memory(device=self.device).to(self.device, non_blocking=True)
