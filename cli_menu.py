@@ -8,7 +8,6 @@ from ml.src.models.mahjong_nn import MahjongNN
 from game.src.core.player import Player
 from ml.src.data_processing import extract_datapoints, refine_data
 
-
 if __name__ == "__main__":
     device = get_device()
     model = None
@@ -16,7 +15,7 @@ if __name__ == "__main__":
     while True:
         print('''
 Select mode:
-data [db_year] [raw_data_filename] [how_many_matches] - extract datapoints
+data [db_year] [raw_data_filename] [how_many_matches] [chunk_size] - extract datapoints
 process [raw_data_filename] [processed_data_filename] - refine data
 init [num_layers] [hidden_size]
 train [processed_data_filename]
@@ -29,16 +28,17 @@ quit
         user_input = input().split(' ')
         match user_input[0]:
             case "data":
-                if len(user_input) != 4:
-                    print("Expecting 3 arguments for init, got {}.".format(len(user_input) - 1))
+                if len(user_input) != 5:
+                    print("Expecting 4 arguments for init, got {}.".format(len(user_input) - 1))
                     continue
 
                 db_year = user_input[1]
                 raw_data_filename = user_input[2]
                 how_many = int(user_input[3])
+                chunk_size = int(user_input[4])
 
                 raw_data_filepath = os.path.join(os.getcwd(), "ml", "data", "raw", raw_data_filename)
-                extract_datapoints(db_year + ".db", raw_data_filepath, how_many=how_many)
+                extract_datapoints(db_year + ".db", raw_data_filepath, how_many=how_many, chunk_size=chunk_size)
 
             case "process":
                 if len(user_input) != 3:

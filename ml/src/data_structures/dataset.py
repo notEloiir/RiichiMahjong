@@ -33,6 +33,8 @@ class DataSet:
         [f"discard_tile_{i}" for i in range(34)] + \
         [f"which_chi_{i}" for i in range(3)] + \
         [f"action_{i}" for i in range(len(MoveType))]
+    label_sizes = (34, 3, len(MoveType))
+    label_split = (34, 34 + 3)
     columns = feature_columns + label_columns
     n_features = len(feature_columns)
     n_labels = len(label_columns)
