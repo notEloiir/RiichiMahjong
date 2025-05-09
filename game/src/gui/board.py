@@ -306,7 +306,7 @@ class Board:
             self.decision_prompt.text = "Which chi to meld?"
             target_tile = kwargs.get("target_tile")
             if target_tile:
-                self.decision_prompt.text += f" ({tile_sprite.TileSprite.get_tile_name(target_tile.true_id())})"
+                self.decision_prompt.text += f" ({tile_sprite.TileSprite.get_tile_name(target_tile.id136())})"
             self.possible_moves = kwargs.get("possible_moves")
             self.chosen_move = None
             self.player_hand.selected_tile = None
@@ -323,7 +323,7 @@ class Board:
                 0.80 * self.height,
             )
             for i, move in enumerate(self.possible_moves):
-                tile_number = (target_tile.to_int()) % 9 + 1
+                tile_number = (target_tile.id34()) % 9 + 1
                 button_text = " - ".join(sorted([str(tile_number), str(tile_number + move[0]), str(tile_number + move[1])]))
                 self.decision_buttons.append(
                     ui_items.Button(

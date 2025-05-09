@@ -1,8 +1,6 @@
 import numpy as np
 import torch
 
-from game.src.core.mahjong_enums import MoveType
-
 
 def roll_list_backwards(lst, roll_by):
     if lst is None:
@@ -15,17 +13,9 @@ def flatten_list(lst):
 
 
 class DataPoint:
-    features_size = 459
-    label_sizes = (34, 3, len(MoveType))
-    labels_size = sum(label_sizes)
-    label_split = (34, 34 + 3)
-
-    features: np.ndarray
-    labels: np.ndarray
-
     def __init__(self):
         self.features = np.empty(0, dtype=np.float32)
-        self.labels = np.empty(0, dtype=np.float32)
+        self.labels = np.empty(3, dtype=np.int64)
 
     def load_features(self, seat, round_no, turn_no, dealer, prevalent_wind, seat_wind,
                       closed_hand_counts, open_hand_counts, discard_pile_orders,
@@ -69,15 +59,11 @@ class DataPoint:
         )
 
     def load_labels(self, discard_tile, which_chi, action):
-        self.labels = np.zeros(self.labels_size, dtype=np.float32)
+        ignore_index = -100.  # Default ignore_index for torch.nn.CrossEntropyLoss
 
-        if discard_tile is not None:
-            self.labels[discard_tile.id34()] = 1.
-        if which_chi is not None:
-            which_chi_maxarg = which_chi.index(max(which_chi))
-            self.labels[self.label_sizes[0] + which_chi_maxarg] = 1.
-        if action is not None:
-            self.labels[self.label_sizes[0] + self.label_sizes[1] + action.value] = 1.
+        self.labels[0] = discard_tile.id34() if discard_tile is not None else ignore_index
+        self.labels[1] = which_chi.index(max(which_chi)) if which_chi is not None else ignore_index
+        self.labels[2] = action.value if action is not None else ignore_index
 
     def torch_features(self) -> torch.Tensor:
         return torch.from_numpy(self.features)

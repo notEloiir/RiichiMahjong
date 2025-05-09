@@ -609,6 +609,8 @@ class Round:
         # if nothing but PASS is possible
         self.event = Event(EventType.DISCARD_TILE, self.curr_player_id)
         if len(possible_calls) == 1:
+            # update trackers
+            self.after_a_kan = False
             return
 
         if is_riichi_possible:
@@ -745,17 +747,17 @@ class Round:
             if p == ((from_who + 1) % 4) and self.tile.id34() < 27 and not self.hand_in_riichi[p]:
                 order_in_set = self.tile.id34() % 9
                 if (
-                    0 < order_in_set < 8 and
-                    self.closed_hand_counts[p][self.tile.id34() - 1] and
-                    self.closed_hand_counts[p][self.tile.id34() + 1]
-                ):
-                    possible_chi[p].append((-1, 1))
-                if (
                     order_in_set > 1 and
                     self.closed_hand_counts[p][self.tile.id34() - 2] and
                     self.closed_hand_counts[p][self.tile.id34() - 1]
                 ):
                     possible_chi[p].append((-2, -1))
+                if (
+                    0 < order_in_set < 8 and
+                    self.closed_hand_counts[p][self.tile.id34() - 1] and
+                    self.closed_hand_counts[p][self.tile.id34() + 1]
+                ):
+                    possible_chi[p].append((-1, 1))
                 if (
                     order_in_set < 7 and
                     self.closed_hand_counts[p][self.tile.id34() + 1] and

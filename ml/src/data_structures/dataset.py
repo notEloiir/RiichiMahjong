@@ -29,12 +29,12 @@ class DataSet:
         [f"red5_hidden_{i}" for i in range(3)] + \
         [f"tile_to_call_{i}" for i in range(34)] + \
         [f"tile_origin_{p}" for p in range(4)]
-    label_columns = \
-        [f"discard_tile_{i}" for i in range(34)] + \
-        [f"which_chi_{i}" for i in range(3)] + \
-        [f"action_{i}" for i in range(len(MoveType))]
+    label_columns = [
+        "discard_tile_id34",
+        "which_chi_id",
+        "action_id",
+    ]
     label_sizes = (34, 3, len(MoveType))
-    label_split = (34, 34 + 3)
     columns = feature_columns + label_columns
     n_features = len(feature_columns)
     n_labels = len(label_columns)
@@ -52,20 +52,34 @@ class DataSet:
             for frag in self._dataset.get_fragments()
         )
 
-        self.weights = np.empty(0)
+        self.weights: list[np.ndarray[np.float32]] = []
         self.calc_weights()
 
     def calc_weights(self):
-        # placeholder
-        self.weights = [np.ones(size) for size in DataSet.label_sizes]
+        # Calculate inverse frequency weights in a dataset
+        counts = [np.ones(size) for size in DataSet.label_sizes]  # +1 for numerical stability
+        totals = [0] * len(DataSet.label_sizes)
+
+        scanner = self._dataset.scanner(batch_size=self.batch_size)
+        for record_batch in scanner.to_batches():
+            # stack into 2D numpy array
+            y_np = np.column_stack([record_batch[c].to_numpy() for c in DataSet.label_columns]).astype(np.int64)
+
+            for head_i in range(len(DataSet.label_sizes)):
+                label_counts = [np.count_nonzero(y_np[head_i] == val) for val in range(DataSet.label_sizes[head_i])]
+                counts[head_i] += label_counts
+                totals[head_i] += np.sum(label_counts)
+
+        self.weights = [totals[head_i] / counts[head_i] for head_i in range(len(DataSet.label_sizes))]
+
 
     def torch_weights(self, labels_part_id):
-        w = torch.from_numpy(self.weights[labels_part_id])
-        w = w.pin_memory(device=self.device)
-        return w.to(self.device, non_blocking=True)
+        return torch.tensor(self.weights[labels_part_id], device=self.device, dtype=torch.float32)
 
     @staticmethod
     def save_batch(datapoints: list[DataPoint], data_dir: str):
+        assert len(datapoints) > 0
+
         os.makedirs(data_dir, exist_ok=True)
 
         features = np.array([dp.features for dp in datapoints])
