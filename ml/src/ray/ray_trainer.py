@@ -20,15 +20,14 @@ def train_loop_per_worker(config):
         for batch in dataset.iter_torch_batches(batch_size=256):
             X = torch.stack([batch[col] for col in DataSet.feature_columns], dim=1)  # just for the record I hate this
             y = torch.stack([batch[col] for col in DataSet.label_columns], dim=1)
-            y_split = torch.hsplit(y, DataSet.label_split)
 
             # forward pass
             y_preds = model(X)  # (n_heads, batch, head_size) logits
 
             # get loss
-            total_loss = criterions[0](y_preds[0], y_split[0])
+            total_loss = criterions[0](y_preds[0], y[:, 0])
             for i in range(1, len(model.heads)):
-                total_loss += criterions[i](y_preds[i], y_split[i])
+                total_loss += criterions[i](y_preds[i], y[:, i])
 
             # backward pass and optimization
             model.optimizer.zero_grad()

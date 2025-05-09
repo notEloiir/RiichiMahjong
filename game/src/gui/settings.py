@@ -11,5 +11,5 @@ PRIMARY_COLOR = "#5C4B51"
 SECONDARY_COLOR = "#F2EBBF"
 
 model_paths = {
-    "normal": "2017raw16",
+    "normal": "ray.pt",
 }
