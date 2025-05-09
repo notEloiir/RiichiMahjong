@@ -48,6 +48,7 @@ class MahjongNN(nn.Module):
         criterions = [
             nn.CrossEntropyLoss(weight=dataset.torch_weights(i)) for i in range(len(self.heads))
         ]
+        self.scheduler.T_max = dataset.n_datapoints
 
         self.train()
         for epoch in range(epochs_no):
@@ -67,7 +68,7 @@ class MahjongNN(nn.Module):
                 total_loss.backward()
                 self.optimizer.step()
 
-                self.scheduler.step()  # T_max == 256 == number of datapoints in batch
+                self.scheduler.step()  # T_max == number of datapoints
 
     def test_model(self, dataset: DataSet):
         criterions = [
