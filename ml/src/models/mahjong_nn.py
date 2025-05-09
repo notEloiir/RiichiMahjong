@@ -3,16 +3,15 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.cuda
 
-from ml.src.data_structures import DataPoint
 from ml.src.data_structures.dataset import DataSet
 
 
 class MahjongNN(nn.Module):
     def __init__(self, num_layers, hidden_size, device):
         super(MahjongNN, self).__init__()
-        self.input_size = DataPoint.features_size
+        self.input_size = DataSet.n_features
         self.hidden_size = hidden_size
-        self.output_size = DataPoint.labels_size
+        self.output_size = DataSet.n_labels
 
         self.num_layers = num_layers
         self.layers = nn.ModuleList()
@@ -22,7 +21,7 @@ class MahjongNN(nn.Module):
             self.layers.append(nn.Linear(hidden_size, hidden_size))
             self.layers.append(nn.ReLU())
         self.heads = nn.ModuleList()
-        for head_size in DataPoint.label_sizes:
+        for head_size in DataSet.label_sizes:
             self.heads.append(nn.Linear(hidden_size, head_size))
 
         self.optimizer = optim.AdamW(self.parameters(), lr=1e-3, weight_decay=1e-3)
@@ -53,15 +52,14 @@ class MahjongNN(nn.Module):
         self.train()
         for epoch in range(epochs_no):
             for X, y in dataset:
-                y_split = torch.hsplit(y, DataPoint.label_split)
-
                 # forward pass
+                y = y.type(torch.int64)
                 y_preds = self(X)  # (n_heads, batch, head_size) logits
 
                 # get loss
-                total_loss = criterions[0](y_preds[0], y_split[0])
+                total_loss = criterions[0](y_preds[0], y[:, 0])
                 for i in range(1, len(self.heads)):
-                    total_loss += criterions[i](y_preds[i], y_split[i])
+                    total_loss += criterions[i](y_preds[i], y[:, i])
 
                 # backward pass and optimization
                 self.optimizer.zero_grad()
@@ -83,9 +81,9 @@ class MahjongNN(nn.Module):
                 y_preds = self(X)  # a list of (batch, head_size) logits
 
                 # get loss
-                total_loss = criterions[0](y_preds[0], y[0])
+                total_loss = criterions[0](y_preds[0], y[:, 0])
                 for i in range(1, len(self.heads)):
-                    total_loss += criterions[i](y_preds[i], y[i])
+                    total_loss += criterions[i](y_preds[i], y[:, i])
 
                 epoch_loss += total_loss.item()
 
