@@ -6,6 +6,7 @@ import mahjong.constants as mc
 
 from game.src.gui.board import Board
 from game.src.gui.menu import Menu
+from game.src.gui.settings import model_paths
 from game.src.core.match import run_match
 from game.src.core.player import  Player
 from ml.src.models.mahjong_nn import MahjongNN
@@ -39,7 +40,7 @@ class GameGui:
 
         competitors = [Player(is_human=True)]
         for _ in range(3):
-            filename = "2017raw24"
+            filename = model_paths["normal"]
             competitors.append(
                 Player(is_human=False, model=MahjongNN.from_file(filename, torch.device("cpu")))
             )

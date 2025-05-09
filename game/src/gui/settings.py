@@ -9,3 +9,7 @@ BIG_FONT_SIZE = 72
 
 PRIMARY_COLOR = "#5C4B51"
 SECONDARY_COLOR = "#F2EBBF"
+
+model_paths = {
+    "normal": "2017raw16",
+}
