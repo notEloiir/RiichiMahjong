@@ -609,6 +609,8 @@ class Round:
         # if nothing but PASS is possible
         self.event = Event(EventType.DISCARD_TILE, self.curr_player_id)
         if len(possible_calls) == 1:
+            # update trackers
+            self.after_a_kan = False
             return
 
         if is_riichi_possible:
@@ -936,7 +938,6 @@ class Round:
 
         for p in range(4):
             self.scores[p] += score_change[p]
-        print(self.closed_hand_counts)
 
         if self.board:
             self.board.show_scores(self.scores, score_change, "Wall exhausted")
@@ -1006,7 +1007,6 @@ class Round:
                 print(fu_item)
             print("")
             '''
-            print(self.closed_hand_counts)
 
             points_gained[p] = hand_result.cost['main'] // 100
 
