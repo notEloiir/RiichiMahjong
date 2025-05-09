@@ -57,7 +57,7 @@ class DataSet:
 
     def calc_weights(self):
         # placeholder
-        self.weights = [np.ones(size) for size in DataPoint.label_sizes]
+        self.weights = [np.ones(size) for size in DataSet.label_sizes]
 
     def torch_weights(self, labels_part_id):
         w = torch.from_numpy(self.weights[labels_part_id])
@@ -86,9 +86,10 @@ class DataSet:
 
     def __iter__(self):
         scanner = self._dataset.scanner(batch_size=self.batch_size)
-        for batch in scanner.to_batches():
-            X_np = np.column_stack([batch.column(i).to_numpy() for i in range(DataSet.n_features)])
-            y_np = np.column_stack([batch.column(i).to_numpy() for i in range(DataSet.n_features, DataSet.n_features + DataSet.n_labels)])
+        for record_batch in scanner.to_batches():
+            # stack into 2D numpy arrays
+            X_np = np.column_stack([record_batch[c].to_numpy() for c in DataSet.feature_columns])
+            y_np = np.column_stack([record_batch[c].to_numpy() for c in DataSet.label_columns])
 
             # convert to torch, pin, move to device
             X = torch.from_numpy(X_np).pin_memory(device=self.device).to(self.device, non_blocking=True)
