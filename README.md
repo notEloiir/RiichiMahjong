@@ -48,8 +48,8 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 1. Download raw logs as explained at https://github.com/ApplySci/phoenix-logs/blob/master/README.md
     1. example (maybe doesn't work on Linux):
     - download ids: `uv run python phoenix-logs/main.py -a id -y 2017`
-    - download content (needs ids): `uv run python phoenix-logs/main.py -a content -y 2017 -l 60000 -t 50`
-      - 60 000 matches is about 1GiB of raw data (parquet, float32, after preliminary filtering)
+    - download content (needs ids): `uv run python phoenix-logs/main.py -a content -y 2017 -l 32000 -t 50`
+      - 64 000 matches results in about 1GiB of raw data (parquet, float32+int64, after preliminary filtering)
     - check content (optional): `uv run python phoenix-logs/debug.py -y 2017`
 
 2. Open CLI menu
@@ -57,7 +57,7 @@ Riichi mahjong - Japanese variation of the classic tile-based game.
 
 3. Prepare data
     1. example:
-    - parse logs into raw data: `data 2017 2017raw 60000 6000`
+    - parse logs into raw data: `data 2017 2017raw 32000 4000`
     - refine raw data: `process 2017raw 2017processed`  
 
 4. Train and save model
