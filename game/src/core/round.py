@@ -745,17 +745,17 @@ class Round:
             if p == ((from_who + 1) % 4) and self.tile.id34() < 27 and not self.hand_in_riichi[p]:
                 order_in_set = self.tile.id34() % 9
                 if (
-                    0 < order_in_set < 8 and
-                    self.closed_hand_counts[p][self.tile.id34() - 1] and
-                    self.closed_hand_counts[p][self.tile.id34() + 1]
-                ):
-                    possible_chi[p].append((-1, 1))
-                if (
                     order_in_set > 1 and
                     self.closed_hand_counts[p][self.tile.id34() - 2] and
                     self.closed_hand_counts[p][self.tile.id34() - 1]
                 ):
                     possible_chi[p].append((-2, -1))
+                if (
+                    0 < order_in_set < 8 and
+                    self.closed_hand_counts[p][self.tile.id34() - 1] and
+                    self.closed_hand_counts[p][self.tile.id34() + 1]
+                ):
+                    possible_chi[p].append((-1, 1))
                 if (
                     order_in_set < 7 and
                     self.closed_hand_counts[p][self.tile.id34() + 1] and
@@ -936,6 +936,7 @@ class Round:
 
         for p in range(4):
             self.scores[p] += score_change[p]
+        print(self.closed_hand_counts)
 
         if self.board:
             self.board.show_scores(self.scores, score_change, "Wall exhausted")
@@ -1005,6 +1006,7 @@ class Round:
                 print(fu_item)
             print("")
             '''
+            print(self.closed_hand_counts)
 
             points_gained[p] = hand_result.cost['main'] // 100
 
