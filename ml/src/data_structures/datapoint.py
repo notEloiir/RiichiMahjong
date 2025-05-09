@@ -79,6 +79,17 @@ class DataPoint:
         if action is not None:
             self.labels[self.label_sizes[0] + self.label_sizes[1] + action.value] = 1.
 
+        # Mask "unused" labels for a particular datapoint
+        ignore_index = -100.  # Default ignore_index for torch.nn.CrossEntropyLoss
+        if discard_tile is None:
+            self.labels[:34] = ignore_index
+        if which_chi is None:
+            self.labels[34:37] = ignore_index
+        if action is None:
+            self.labels[37:] = ignore_index
+
+
+
     def torch_features(self) -> torch.Tensor:
         return torch.from_numpy(self.features)
 

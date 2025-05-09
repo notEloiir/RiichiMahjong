@@ -52,12 +52,28 @@ class DataSet:
             for frag in self._dataset.get_fragments()
         )
 
-        self.weights = np.empty(0)
+        self.weights: list[np.ndarray[np.float32]] = []
         self.calc_weights()
 
     def calc_weights(self):
-        # placeholder
-        self.weights = [np.ones(size) for size in DataSet.label_sizes]
+        # Calculate inverse frequency weights in a dataset
+        counts = [np.ones(size) for size in DataSet.label_sizes]  # +1 for numerical stability
+        totals = [0] * len(DataSet.label_sizes)
+
+        scanner = self._dataset.scanner(batch_size=self.batch_size)
+        for record_batch in scanner.to_batches():
+            # stack into 2D numpy array
+            y_np = np.column_stack([record_batch[c].to_numpy() for c in DataSet.label_columns])
+
+            y_split = np.hsplit(y_np, DataSet.label_split)
+
+            for head_i in range(len(DataSet.label_sizes)):
+                label_counts = np.sum(y_split[head_i], axis=0)
+                counts[head_i] += label_counts
+                totals[head_i] += np.sum(label_counts)
+
+        self.weights = [totals[head_i] / counts[head_i] for head_i in range(len(DataSet.label_sizes))]
+
 
     def torch_weights(self, labels_part_id):
         w = torch.from_numpy(self.weights[labels_part_id])
